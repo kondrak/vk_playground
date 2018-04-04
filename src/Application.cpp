@@ -66,14 +66,29 @@ void Application::OnStart(int argc, char **argv)
     VK_VERIFY(vk::createUniformBuffer(g_renderContext.device, sizeof(UniformBufferObject), &m_uniformBuffer));
 
     /* Create buffers here */
+    m_descriptor.setLayout = m_dsLayout;
+
+    const Vertex verts[3] = { { 0.0, 0.0, 1.0, 0.0, 0.0 },
+                              { 0.0, 1.0, 1.0, 0.0, 1.0 },
+                              { 1.0, 0.0, 1.0, 1.0, 0.0 } };
+
+    const uint32_t indices[3] = { 0, 1, 2 };
+
+    // vertex buffer and index buffer with staging buffer
+    vk::createVertexBuffer(g_renderContext.device, m_commandPool,
+                           verts, sizeof(Vertex) * 3, &m_vertexBuffer);
+    vk::createIndexBuffer(g_renderContext.device, m_commandPool,
+                          indices, sizeof(uint32_t) * 3, &m_indexBuffer);
+    const vk::Texture *textureSet[1] = { *m_texture };
+    CreateDescriptor(textureSet, &m_descriptor);
 
     RebuildPipelines();
     VK_VERIFY(vk::createCommandBuffers(g_renderContext.device, m_commandPool, m_commandBuffers, g_renderContext.frameBuffers.size()));
 
     g_cameraDirector.AddCamera(Math::Vector3f(0.f, 0.f, 0.f),
-                               Math::Vector3f(0.f, 0.f, 1.f),
+                               Math::Vector3f(0.f, 1.f, 0.f),
                                Math::Vector3f(1.f, 0.f, 0.f),
-                               Math::Vector3f(0.f, 1.f, 0.f));
+                               Math::Vector3f(0.f, 0.f, -1.f));
 
     // set to "clean" perspective matrix
     g_cameraDirector.GetActiveCamera()->SetMode(Camera::CAM_FPS);
@@ -129,7 +144,10 @@ void Application::OnTerminate()
 {
     vkDeviceWaitIdle(g_renderContext.device.logical);
     vk::destroyPipeline(g_renderContext.device, m_facesPipeline);
+    vkDestroyDescriptorPool(g_renderContext.device.logical, m_descriptor.pool, nullptr);
     vk::freeBuffer(g_renderContext.device, m_uniformBuffer);
+    vk::freeBuffer(g_renderContext.device, m_vertexBuffer);
+    vk::freeBuffer(g_renderContext.device, m_indexBuffer);
     vk::freeCommandBuffers(g_renderContext.device, m_commandPool, m_commandBuffers);
     vk::destroyRenderPass(g_renderContext.device, m_renderPass);
     vkDestroyCommandPool(g_renderContext.device.logical, m_commandPool, nullptr);
@@ -225,6 +243,60 @@ void Application::CreateDescriptorSetLayout()
     VK_VERIFY(vkCreateDescriptorSetLayout(g_renderContext.device.logical, &layoutInfo, nullptr, &m_dsLayout));
 }
 
+void Application::CreateDescriptor(const vk::Texture **textures, vk::Descriptor *descriptor)
+{
+    // create descriptor pool
+    VkDescriptorPoolSize poolSizes[3];
+    poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSizes[0].descriptorCount = 1;
+    poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    poolSizes[1].descriptorCount = 1;
+
+    VkDescriptorPoolCreateInfo poolInfo = {};
+    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.poolSizeCount = 2;
+    poolInfo.pPoolSizes = poolSizes;
+    poolInfo.maxSets = 1;
+
+    VK_VERIFY(vkCreateDescriptorPool(g_renderContext.device.logical, &poolInfo, nullptr, &descriptor->pool));
+
+    // create descriptor set
+    VK_VERIFY(vk::createDescriptorSet(g_renderContext.device, descriptor));
+    VkDescriptorBufferInfo bufferInfo = {};
+    bufferInfo.offset = 0;
+    bufferInfo.buffer = m_uniformBuffer.buffer;
+    bufferInfo.range = sizeof(UniformBufferObject);
+
+    VkDescriptorImageInfo imageInfo = {};
+    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    imageInfo.imageView = textures[0]->imageView;
+    imageInfo.sampler = textures[0]->sampler;
+
+    VkWriteDescriptorSet descriptorWrites[2];
+    descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptorWrites[0].dstSet = descriptor->set;
+    descriptorWrites[0].dstBinding = 0;
+    descriptorWrites[0].dstArrayElement = 0;
+    descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptorWrites[0].descriptorCount = 1;
+    descriptorWrites[0].pBufferInfo = &bufferInfo;
+    descriptorWrites[0].pImageInfo = nullptr;
+    descriptorWrites[0].pTexelBufferView = nullptr;
+    descriptorWrites[0].pNext = nullptr;
+    descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptorWrites[1].dstSet = descriptor->set;
+    descriptorWrites[1].dstBinding = 1;
+    descriptorWrites[1].dstArrayElement = 0;
+    descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    descriptorWrites[1].descriptorCount = 1;
+    descriptorWrites[1].pBufferInfo = nullptr;
+    descriptorWrites[1].pImageInfo = &imageInfo;
+    descriptorWrites[1].pTexelBufferView = nullptr;
+    descriptorWrites[1].pNext = nullptr;
+
+    vkUpdateDescriptorSets(g_renderContext.device.logical, 2, descriptorWrites, 0, nullptr);
+}
+
 void Application::RebuildPipelines()
 {
     vkDeviceWaitIdle(g_renderContext.device.logical);
@@ -264,18 +336,11 @@ void Application::RecordCommandBuffers()
         // queue standard faces
         vkCmdBindPipeline(m_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_facesPipeline.pipeline);
 
-        /*for (auto &f : m_visibleFaces)
-        {
-            FaceBuffers &fb = m_renderBuffers.m_faceBuffers[f->index];
-
-            VkBuffer vertexBuffers[] = { fb.vertexBuffer.buffer };
-            VkDeviceSize offsets[] = { 0 };
-            vkCmdBindVertexBuffers(m_commandBuffers[i], 0, 1, vertexBuffers, offsets);
-            // quake 3 bsp requires uint32 for index type - 16 is too small
-            vkCmdBindIndexBuffer(m_commandBuffers[i], fb.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-            vkCmdBindDescriptorSets(m_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_facesPipeline.layout, 0, 1, &fb.descriptor.set, 0, nullptr);
-            vkCmdDrawIndexed(m_commandBuffers[i], fb.indexCount, 1, 0, 0, 0);
-        }*/
+        VkDeviceSize offsets[] = { 0 };
+        vkCmdBindVertexBuffers(m_commandBuffers[i], 0, 1, &m_vertexBuffer.buffer, offsets);
+        vkCmdBindIndexBuffer(m_commandBuffers[i], m_indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindDescriptorSets(m_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_facesPipeline.layout, 0, 1, &m_descriptor.set, 0, nullptr);
+        vkCmdDrawIndexed(m_commandBuffers[i], 3, 1, 0, 0, 0);
 
         vkCmdEndRenderPass(m_commandBuffers[i]);
 
