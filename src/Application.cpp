@@ -47,7 +47,8 @@ void Application::OnWindowMinimized(bool minimized)
 
 void Application::OnStart(int argc, char **argv)
 {
-    m_facesPipeline.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    m_pipeline.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+
     VK_VERIFY(vk::createRenderPass(g_renderContext.device, g_renderContext.swapChain, &m_renderPass));
     VK_VERIFY(vk::createCommandPool(g_renderContext.device, &m_commandPool));
 
@@ -68,24 +69,25 @@ void Application::OnStart(int argc, char **argv)
     /* Create buffers here */
     m_descriptor.setLayout = m_dsLayout;
 
-    const Vertex verts[3] = { { 0.0, 0.0, 1.0, 0.0, 0.0 },
-                              { 0.0, 1.0, 1.0, 0.0, 1.0 },
-                              { 1.0, 0.0, 1.0, 1.0, 0.0 } };
+    const Vertex verts[4] = { { 0.0, 0.0, -1.0, 0.0, 0.0 },
+                              { 0.0, 1.0, -1.0, 0.0, 1.0 },
+                              { 1.0, 0.0, -1.0, 1.0, 0.0 },
+                              { 1.0, 1.0, -1.0, 1.0, 1.0 } };
 
-    const uint32_t indices[3] = { 0, 1, 2 };
+    const uint32_t indices[6] = { 0, 1, 2, 1, 3, 2 };
 
     // vertex buffer and index buffer with staging buffer
     vk::createVertexBuffer(g_renderContext.device, m_commandPool,
-                           verts, sizeof(Vertex) * 3, &m_vertexBuffer);
+                           verts, sizeof(Vertex) * 4, &m_vertexBuffer);
     vk::createIndexBuffer(g_renderContext.device, m_commandPool,
-                          indices, sizeof(uint32_t) * 3, &m_indexBuffer);
+                          indices, sizeof(uint32_t) * 6, &m_indexBuffer);
     const vk::Texture *textureSet[1] = { *m_texture };
     CreateDescriptor(textureSet, &m_descriptor);
 
     RebuildPipelines();
     VK_VERIFY(vk::createCommandBuffers(g_renderContext.device, m_commandPool, m_commandBuffers, g_renderContext.frameBuffers.size()));
 
-    g_cameraDirector.AddCamera(Math::Vector3f(0.f, 0.f, 0.f),
+    g_cameraDirector.AddCamera(Math::Vector3f(0.5f, 0.5f, 0.f),
                                Math::Vector3f(0.f, 1.f, 0.f),
                                Math::Vector3f(1.f, 0.f, 0.f),
                                Math::Vector3f(0.f, 0.f, -1.f));
@@ -143,7 +145,7 @@ void Application::OnUpdate(float dt)
 void Application::OnTerminate()
 {
     vkDeviceWaitIdle(g_renderContext.device.logical);
-    vk::destroyPipeline(g_renderContext.device, m_facesPipeline);
+    vk::destroyPipeline(g_renderContext.device, m_pipeline);
     vkDestroyDescriptorPool(g_renderContext.device.logical, m_descriptor.pool, nullptr);
     vk::freeBuffer(g_renderContext.device, m_uniformBuffer);
     vk::freeBuffer(g_renderContext.device, m_vertexBuffer);
@@ -300,11 +302,11 @@ void Application::CreateDescriptor(const vk::Texture **textures, vk::Descriptor 
 void Application::RebuildPipelines()
 {
     vkDeviceWaitIdle(g_renderContext.device.logical);
-    vk::destroyPipeline(g_renderContext.device, m_facesPipeline);
+    vk::destroyPipeline(g_renderContext.device, m_pipeline);
 
     // todo: pipeline derivatives https://github.com/SaschaWillems/Vulkan/blob/master/examples/pipelines/pipelines.cpp
     const char *shaders[] = { "res/Basic_vert.spv", "res/Basic_frag.spv" };
-    VK_VERIFY(vk::createPipeline(g_renderContext.device, g_renderContext.swapChain, m_renderPass, m_dsLayout, &m_vbInfo, &m_facesPipeline, shaders));
+    VK_VERIFY(vk::createPipeline(g_renderContext.device, g_renderContext.swapChain, m_renderPass, m_dsLayout, &m_vbInfo, &m_pipeline, shaders));
 }
 
 void Application::RecordCommandBuffers()
@@ -334,13 +336,13 @@ void Application::RecordCommandBuffers()
         vkCmdBeginRenderPass(m_commandBuffers[i], &renderBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
         // queue standard faces
-        vkCmdBindPipeline(m_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_facesPipeline.pipeline);
+        vkCmdBindPipeline(m_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline.pipeline);
 
         VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(m_commandBuffers[i], 0, 1, &m_vertexBuffer.buffer, offsets);
         vkCmdBindIndexBuffer(m_commandBuffers[i], m_indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdBindDescriptorSets(m_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_facesPipeline.layout, 0, 1, &m_descriptor.set, 0, nullptr);
-        vkCmdDrawIndexed(m_commandBuffers[i], 3, 1, 0, 0, 0);
+        vkCmdBindDescriptorSets(m_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline.layout, 0, 1, &m_descriptor.set, 0, nullptr);
+        vkCmdDrawIndexed(m_commandBuffers[i], 6, 1, 0, 0, 0);
 
         vkCmdEndRenderPass(m_commandBuffers[i]);
 

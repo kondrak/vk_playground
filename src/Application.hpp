@@ -49,7 +49,7 @@ private:
     vk::Buffer m_uniformBuffer;
     vk::Buffer m_vertexBuffer;
     vk::Buffer m_indexBuffer;
-    vk::Pipeline   m_facesPipeline; // used for rendering standard faces
+    vk::Pipeline   m_pipeline; // used for rendering standard faces
     vk::RenderPass m_renderPass;
     VkCommandPool  m_commandPool = VK_NULL_HANDLE;
     vk::CmdBufferList m_commandBuffers;
