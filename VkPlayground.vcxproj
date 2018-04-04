@@ -17,10 +17,6 @@
     <ClCompile Include="src\InputHandlers.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\Math.cpp" />
-    <ClCompile Include="src\q3bsp\Q3BSPLoader.cpp" />
-    <ClCompile Include="src\q3bsp\Q3BspMap.cpp" />
-    <ClCompile Include="src\q3bsp\Q3BspPatch.cpp" />
-    <ClCompile Include="src\q3bsp\Q3BspStatsUI.cpp" />
     <ClCompile Include="src\renderer\Camera.cpp" />
     <ClCompile Include="src\renderer\CameraDirector.cpp" />
     <ClCompile Include="src\renderer\Font.cpp" />
@@ -34,23 +30,14 @@
     <ClCompile Include="src\renderer\vulkan\Image.cpp" />
     <ClCompile Include="src\renderer\vulkan\Pipeline.cpp" />
     <ClCompile Include="src\renderer\vulkan\Validation.cpp" />
-    <ClCompile Include="src\StringHelpers.cpp" />
     <ClCompile Include="src\Utils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="contrib\stb_image\stb_image.h" />
     <ClInclude Include="src\Application.hpp" />
-    <ClInclude Include="src\common\BspMap.hpp" />
-    <ClInclude Include="src\common\StatsUI.hpp" />
     <ClInclude Include="src\Frustum.hpp" />
     <ClInclude Include="src\InputHandlers.hpp" />
     <ClInclude Include="src\Math.hpp" />
-    <ClInclude Include="src\q3bsp\Q3Bsp.hpp" />
-    <ClInclude Include="src\q3bsp\Q3BSPLoader.hpp" />
-    <ClInclude Include="src\q3bsp\Q3BspMap.hpp" />
-    <ClInclude Include="src\q3bsp\Q3BspPatch.hpp" />
-    <ClInclude Include="src\q3bsp\Q3BspRenderHelpers.hpp" />
-    <ClInclude Include="src\q3bsp\Q3BspStatsUI.hpp" />
     <ClInclude Include="src\renderer\Camera.hpp" />
     <ClInclude Include="src\renderer\CameraDirector.hpp" />
     <ClInclude Include="src\renderer\Font.hpp" />
@@ -65,7 +52,6 @@
     <ClInclude Include="src\renderer\vulkan\Pipeline.hpp" />
     <ClInclude Include="src\renderer\vulkan\Validation.hpp" />
     <ClInclude Include="src\renderer\vulkan\vk_mem_alloc.h" />
-    <ClInclude Include="src\StringHelpers.hpp" />
     <ClInclude Include="src\Utils.hpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

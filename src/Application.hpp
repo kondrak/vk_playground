@@ -4,6 +4,7 @@
 #include <map>
 #include "InputHandlers.hpp"
 #include "Math.hpp"
+#include "renderer/RenderContext.hpp"
 
 /*
  * main application
@@ -36,6 +37,22 @@ private:
     bool m_noRedraw    = false;   //  do not perform window redraw
 
     std::map<KeyCode, bool> m_keyStates;
+
+    // rendering Vulkan buffers and pipelines
+    void CreateDescriptorSetLayout();
+    void RebuildPipelines();
+    void RecordCommandBuffers();
+
+    UniformBufferObject m_ubo;
+    vk::Buffer m_uniformBuffer;
+    vk::Pipeline   m_facesPipeline; // used for rendering standard faces
+    vk::RenderPass m_renderPass;
+    VkCommandPool  m_commandPool = VK_NULL_HANDLE;
+    vk::CmdBufferList m_commandBuffers;
+
+    // all faces and patches use shared vertex buffer info and descriptor set layout
+    vk::VertexBufferInfo  m_vbInfo;
+    VkDescriptorSetLayout m_dsLayout;
 };
 
 #endif
