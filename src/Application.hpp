@@ -5,6 +5,7 @@
 #include "InputHandlers.hpp"
 #include "Math.hpp"
 #include "renderer/RenderContext.hpp"
+#include "renderer/TextureManager.hpp"
 
 /*
  * main application
@@ -49,6 +50,7 @@ private:
     vk::RenderPass m_renderPass;
     VkCommandPool  m_commandPool = VK_NULL_HANDLE;
     vk::CmdBufferList m_commandBuffers;
+    GameTexture *m_texture = nullptr;
 
     // all faces and patches use shared vertex buffer info and descriptor set layout
     vk::VertexBufferInfo  m_vbInfo;

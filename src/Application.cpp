@@ -54,6 +54,8 @@ void Application::OnStart(int argc, char **argv)
     // build the swap chain
     g_renderContext.RecreateSwapChain(m_commandPool, m_renderPass);
 
+    m_texture = TextureManager::GetInstance()->LoadTexture("res/block_blue.png", m_commandPool);
+
     // create a common descriptor set layout and vertex buffer info
     m_vbInfo.bindingDescriptions.push_back(vk::getBindingDescription(sizeof(Vertex)));
     m_vbInfo.attributeDescriptions.push_back(vk::getAttributeDescription(inVertex, VK_FORMAT_R32G32B32_SFLOAT, 0));
