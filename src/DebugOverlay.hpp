@@ -19,8 +19,9 @@ public:
         delete m_font;
     }
 
-    void OnFrameStart()
+    void OnFrameStart(float dt)
     {
+        m_time += dt;
         m_numFrames++;
     }
 
@@ -34,13 +35,12 @@ public:
         m_font->RenderText( sstream.str().c_str(), -1.0f, 1.0f );
         m_font->RenderText( sstream2.str().c_str(), -1.0f, 0.95f );
 
-        if( SDL_GetTicks() - m_lastTime >= 1000 )
+        if (m_time > .25f)
         {
-            m_numFramesToDraw = m_numFrames;
+            m_numFramesToDraw = int(m_numFrames / m_time);
             m_numFrames = 0;
-            m_lastTime = SDL_GetTicks();
+            m_time = 0.f;
         }
-
         m_font->RenderFinish();
     }
 
@@ -54,6 +54,7 @@ private:
     int m_numFrames;
     int m_numFramesToDraw;
     int m_lastTime;
+    float m_time;
 };
 
 

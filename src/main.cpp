@@ -8,7 +8,6 @@
 RenderContext  g_renderContext;
 Application    g_application;
 CameraDirector g_cameraDirector;
-int g_fps = 1;
 
 int main(int argc, char **argv)
 {
@@ -30,8 +29,6 @@ int main(int argc, char **argv)
     g_application.OnStart(argc, argv);
 
     double now = 0, last = 0;
-    int numFrames = 0;
-    float time = 0.f;
 
     while (g_application.Running())
     {
@@ -42,20 +39,10 @@ int main(int argc, char **argv)
         float dt = float(now - last) / 1000.f;
 
         g_application.OnUpdate(dt);
-
         g_renderContext.ModelViewProjectionMatrix = g_cameraDirector.GetActiveCamera()->ViewMatrix() * g_cameraDirector.GetActiveCamera()->ProjectionMatrix();
         g_application.OnRender();
 
         last = now;
-        time += dt;
-        numFrames++;
-
-        if (time > .25f)
-        {
-            g_fps = int(numFrames / time);
-            numFrames = 0;
-            time = 0.f;
-        }
     }
 
     g_application.OnTerminate();
