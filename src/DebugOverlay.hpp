@@ -32,7 +32,7 @@ public:
         sstream << m_numFramesToDraw << " FPS";
         sstream2 << 1000.f / m_numFramesToDraw << " ms";
         m_font->RenderText( sstream.str().c_str(), -1.0f, 1.0f );
-        m_font->RenderText( sstream2.str().c_str(), -1.0f, 0.975f );
+        m_font->RenderText( sstream2.str().c_str(), -1.0f, 0.95f );
 
         if( SDL_GetTicks() - m_lastTime >= 1000 )
         {
@@ -71,7 +71,7 @@ public:
     }
 
     void OnUpdate( float dt );
-    void OnRender();
+    bool OnRender();
     void OnKeyPress( KeyCode key );
     bool DebugFlagSet( DebugFlag df ) { return ( m_debugFlags & df ) != 0; }
     void RebuildPipeline() { m_fpsCounter.RebuildPipeline(); }

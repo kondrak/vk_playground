@@ -114,25 +114,16 @@ void Application::OnRender()
         return;
     }
 
-    // render the bsp
     g_cameraDirector.GetActiveCamera()->UpdateView();
-    //m_q3map->OnRender();
-    m_ubo.ModelViewProjectionMatrix = g_renderContext.ModelViewProjectionMatrix;
 
-    void *data;
-    vmaMapMemory(g_renderContext.device.allocator, m_uniformBuffer.allocation, &data);
-    memcpy(data, &m_ubo, sizeof(m_ubo));
-    vmaUnmapMemory(g_renderContext.device.allocator, m_uniformBuffer.allocation);
+    // render the quad
+    RenderQuad();
 
-    // record new set of command buffers including only visible faces and patches
-    RecordCommandBuffers();
+    // render debug overlay
+    bool overlayVisible = m_debugOverlay->OnRender();
 
-    // render visible faces
-    VK_VERIFY(g_renderContext.Submit(m_commandBuffers));
-
-    m_debugOverlay->OnRender();
-
-    renderResult = g_renderContext.Present(true);
+    // present!
+    renderResult = g_renderContext.Present(overlayVisible);
 
     // recreate swapchain if it's out of date
     if (renderResult == VK_ERROR_OUT_OF_DATE_KHR || renderResult == VK_SUBOPTIMAL_KHR)
@@ -146,6 +137,22 @@ void Application::OnRender()
 void Application::OnUpdate(float dt)
 {
     UpdateCamera(dt);
+    m_debugOverlay->OnUpdate(dt);
+}
+
+void Application::RenderQuad()
+{
+    m_ubo.ModelViewProjectionMatrix = g_renderContext.ModelViewProjectionMatrix;
+
+    void *data;
+    vmaMapMemory(g_renderContext.device.allocator, m_uniformBuffer.allocation, &data);
+    memcpy(data, &m_ubo, sizeof(m_ubo));
+    vmaUnmapMemory(g_renderContext.device.allocator, m_uniformBuffer.allocation);
+
+    // record new set of command buffers including only visible faces and patches
+    RecordCommandBuffers();
+
+    VK_VERIFY(g_renderContext.Submit(m_commandBuffers));
 }
 
 void Application::OnTerminate()

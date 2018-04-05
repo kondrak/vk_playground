@@ -22,7 +22,7 @@ public:
     void RenderText(const std::string &text);
     void RenderText(const std::string &text, float x, float y, float z, float r, float g, float b);
     void RenderText(const std::string &text, const Math::Vector3f &position, const Math::Vector3f &color);
-    void RenderText(const std::string &text, float x, float y, float z = -1.0f);
+    void RenderText(const std::string &text, float x, float y, float z = 0.f);
     void RenderStart();
     void RenderFinish();
     void RebuildPipeline();

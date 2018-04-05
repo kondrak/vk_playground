@@ -33,6 +33,7 @@ public:
 private:
 
     void UpdateCamera(float dt);
+    void RenderQuad();
     inline void SetKeyPressed(KeyCode key, bool pressed) { m_keyStates[key] = pressed; }
 
     bool m_running     = true;    // application is running
