@@ -30,9 +30,6 @@
     <ClCompile Include="src\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Frustum.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\renderer\Camera.cpp">
       <Filter>Source Files\renderer</Filter>
     </ClCompile>
@@ -87,9 +84,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Application.hpp">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Frustum.hpp">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="src\renderer\Camera.hpp">

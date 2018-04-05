@@ -13,7 +13,6 @@
   <ItemGroup>
     <ClCompile Include="contrib\stb_image\stb_image.c" />
     <ClCompile Include="src\Application.cpp" />
-    <ClCompile Include="src\Frustum.cpp" />
     <ClCompile Include="src\InputHandlers.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\Math.cpp" />
@@ -35,7 +34,6 @@
   <ItemGroup>
     <ClInclude Include="contrib\stb_image\stb_image.h" />
     <ClInclude Include="src\Application.hpp" />
-    <ClInclude Include="src\Frustum.hpp" />
     <ClInclude Include="src\InputHandlers.hpp" />
     <ClInclude Include="src\Math.hpp" />
     <ClInclude Include="src\renderer\Camera.hpp" />
