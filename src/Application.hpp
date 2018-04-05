@@ -2,6 +2,7 @@
 #define APPLICATION_INCLUDED
 
 #include <map>
+#include "DebugOverlay.hpp"
 #include "InputHandlers.hpp"
 #include "Math.hpp"
 #include "renderer/RenderContext.hpp"
@@ -59,6 +60,8 @@ private:
     // all faces and patches use shared vertex buffer info and descriptor set layout
     vk::VertexBufferInfo  m_vbInfo;
     VkDescriptorSetLayout m_dsLayout;
+
+    DebugOverlay *m_debugOverlay = nullptr;
 };
 
 #endif

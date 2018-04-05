@@ -32,6 +32,7 @@ void Application::OnWindowResize(int newWidth, int newHeight)
 
         g_renderContext.RecreateSwapChain(m_commandPool, m_renderPass);
         RebuildPipelines();
+        m_debugOverlay->RebuildPipeline();
     }
     else
         m_noRedraw = true;
@@ -94,6 +95,7 @@ void Application::OnStart(int argc, char **argv)
 
     // set to "clean" perspective matrix
     g_cameraDirector.GetActiveCamera()->SetMode(Camera::CAM_FPS);
+    m_debugOverlay = new DebugOverlay();
 }
 
 void Application::OnRender()
@@ -108,6 +110,7 @@ void Application::OnRender()
     {
         g_renderContext.RecreateSwapChain(m_commandPool, m_renderPass);
         RebuildPipelines();
+        m_debugOverlay->RebuildPipeline();
         return;
     }
 
@@ -127,13 +130,16 @@ void Application::OnRender()
     // render visible faces
     VK_VERIFY(g_renderContext.Submit(m_commandBuffers));
 
-    renderResult = g_renderContext.Present(false);
+    m_debugOverlay->OnRender();
+
+    renderResult = g_renderContext.Present(true);
 
     // recreate swapchain if it's out of date
     if (renderResult == VK_ERROR_OUT_OF_DATE_KHR || renderResult == VK_SUBOPTIMAL_KHR)
     {
         g_renderContext.RecreateSwapChain(m_commandPool, m_renderPass);
         RebuildPipelines();
+        m_debugOverlay->RebuildPipeline();
     }
 }
 
@@ -154,6 +160,8 @@ void Application::OnTerminate()
     vk::destroyRenderPass(g_renderContext.device, m_renderPass);
     vkDestroyCommandPool(g_renderContext.device.logical, m_commandPool, nullptr);
     vkDestroyDescriptorSetLayout(g_renderContext.device.logical, m_dsLayout, nullptr);
+
+    delete m_debugOverlay;
 }
 
 bool Application::KeyPressed(KeyCode key)
@@ -177,6 +185,8 @@ void Application::OnKeyPress(KeyCode key)
     default:
         break;
     }
+
+    m_debugOverlay->OnKeyPress(key);
 }
 
 void Application::OnKeyRelease(KeyCode key)
