@@ -8,7 +8,7 @@
 class FPSCounter
 {
 public:
-    FPSCounter() : m_numFrames( 0 ), m_numFramesToDraw( 1 ), m_lastTime( 1000 )
+    FPSCounter() : m_numFrames( 0 ), m_numFramesToDraw( 1 ), m_time(0.f)
     {
         m_font = new Font( "res/font.png" );
         m_font->SetScale(Math::Vector2f(2.f, 2.f));
@@ -53,7 +53,6 @@ private:
     Font *m_font;
     int m_numFrames;
     int m_numFramesToDraw;
-    int m_lastTime;
     float m_time;
 };
 
