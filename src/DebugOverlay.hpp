@@ -71,7 +71,7 @@ public:
     }
 
     void OnUpdate( float dt );
-    bool OnRender();
+    void OnRender();
     void OnKeyPress( KeyCode key );
     bool DebugFlagSet( DebugFlag df ) { return ( m_debugFlags & df ) != 0; }
     void RebuildPipeline() { m_fpsCounter.RebuildPipeline(); }
