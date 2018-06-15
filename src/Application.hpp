@@ -37,7 +37,7 @@ private:
     inline void SetKeyPressed(KeyCode key, bool pressed) { m_keyStates[key] = pressed; }
 
     bool m_running     = true;    // application is running
-    bool m_noRedraw    = false;   //  do not perform window redraw
+    bool m_noRedraw    = false;   // do not perform window redraw
 
     std::map<KeyCode, bool> m_keyStates;
 
