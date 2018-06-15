@@ -6,6 +6,8 @@
 #include "Utils.hpp"
 #include <algorithm>
 
+static bool cmdSubmitted[2];
+
 bool RenderContext::Init(const char *title, int x, int y, int w, int h)
 {
     window = SDL_CreateWindow(title, x, y, w, h, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN);
@@ -40,6 +42,11 @@ void RenderContext::Destroy()
     if (window)
     {
         vkDeviceWaitIdle(device.logical);
+
+        vk::destroyRenderPass(device, m_renderPass);
+        vk::freeCommandBuffers(device, m_commandPool, m_commandBuffers);
+        vkDestroyCommandPool(device.logical, m_commandPool, nullptr);
+ 
         DestroyFramebuffers();
         DestroyImageViews();
         DestroyDepthBuffer();
@@ -47,9 +54,13 @@ void RenderContext::Destroy()
         TextureManager::GetInstance()->ReleaseTextures();
 
         vkDestroySwapchainKHR(device.logical, swapChain.sc, nullptr);
-        vkDestroySemaphore(device.logical, m_imageAvailableSemaphore, nullptr);
-        vkDestroySemaphore(device.logical, renderFinishedSemaphore, nullptr);
-        vkDestroySemaphore(device.logical, renderUIFinishedSemaphore, nullptr);
+        for (int i = 0; i < 2; ++i)
+        {
+            vkDestroySemaphore(device.logical, m_imageAvailableSemaphore[i], nullptr);
+            vkDestroySemaphore(device.logical, m_renderFinishedSemaphore[i], nullptr);
+            vkDestroyFence(device.logical, m_fences[i], nullptr);
+        }
+
         vk::destroyAllocator(device.allocator);
         vkDestroyDevice(device.logical, nullptr);
         vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
@@ -65,45 +76,80 @@ void RenderContext::Destroy()
 VkResult RenderContext::RenderStart()
 {
 #undef max
-    vkQueueWaitIdle(device.presentQueue);
-    VkResult result = vkAcquireNextImageKHR(device.logical, swapChain.sc, std::numeric_limits<int>::max(), m_imageAvailableSemaphore, VK_NULL_HANDLE, &m_imageIndex);
+    if (cmdSubmitted[currCmd])
+    {
+        VK_VERIFY(vkWaitForFences(device.logical, 1, &m_fences[currCmd], VK_TRUE, UINT64_MAX));
+    }
+    vkResetFences(device.logical, 1, &m_fences[currCmd]);
+    
+    VkResult result = vkAcquireNextImageKHR(device.logical, swapChain.sc, UINT64_MAX, m_imageAvailableSemaphore[currCmd], VK_NULL_HANDLE, &m_imageIndex);
 
     // swapchain has become incompatible - application has to recreate it
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
         return result;
 
+    LOG_MESSAGE_ASSERT(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR, "Could not acquire swapchain image: " << result);
+
+    // setup command buffers and render pass for drawing
+    VkCommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    beginInfo.pInheritanceInfo = nullptr;
+
+    result = vkBeginCommandBuffer(m_commandBuffers[currCmd], &beginInfo);
+    LOG_MESSAGE_ASSERT(result == VK_SUCCESS, "Could not begin command buffer: " << result);
+
+    VkClearValue clearColors[2];
+    clearColors[0].color = { 0.f, 0.f, 0.f, 1.f };
+    clearColors[1].depthStencil = { 1.0f, 0 };
+    VkRenderPassBeginInfo renderBeginInfo = {};
+    renderBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderBeginInfo.renderPass = m_renderPass.renderPass;
+    renderBeginInfo.framebuffer = frameBuffers[m_imageIndex];
+    renderBeginInfo.renderArea.offset = { 0, 0 };
+    renderBeginInfo.renderArea.extent = swapChain.extent;
+    renderBeginInfo.clearValueCount = 2;
+    renderBeginInfo.pClearValues = clearColors;
+
+    vkCmdBeginRenderPass(m_commandBuffers[currCmd], &renderBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+    return VK_SUCCESS;
+}
+
+VkResult RenderContext::Submit()
+{
+    vkCmdEndRenderPass(m_commandBuffers[currCmd]);
+
+    VkResult result = vkEndCommandBuffer(m_commandBuffers[currCmd]);
+    LOG_MESSAGE_ASSERT(result == VK_SUCCESS, "Error recording command buffer: " << result);
+
+    VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores = &m_imageAvailableSemaphore;
+    submitInfo.pWaitSemaphores = &m_imageAvailableSemaphore[currCmd];
     submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = &renderFinishedSemaphore;
-
-    LOG_MESSAGE_ASSERT(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR, "Could not acquire swapchain image: " << result);
-    return result;
-}
-
-VkResult RenderContext::Submit(const vk::CmdBufferList &commandBuffers)
-{
-    VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    submitInfo.pSignalSemaphores = &m_renderFinishedSemaphore[currCmd];
     submitInfo.pWaitDstStageMask = waitStages;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &commandBuffers[m_imageIndex];
+    submitInfo.pCommandBuffers = &m_commandBuffers[currCmd];
 
-    return vkQueueSubmit(device.graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+    return vkQueueSubmit(device.graphicsQueue, 1, &submitInfo, m_fences[currCmd]);
 }
 
-VkResult RenderContext::Present(bool uiVisible)
+VkResult RenderContext::Present()
 {
     VkSwapchainKHR swapChains[] = { swapChain.sc };
     VkPresentInfoKHR presentInfo = {};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = uiVisible ? &renderUIFinishedSemaphore : &renderFinishedSemaphore;
+    presentInfo.pWaitSemaphores = &m_renderFinishedSemaphore[currCmd];
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
     presentInfo.pImageIndices = &m_imageIndex;
     presentInfo.pResults = nullptr;
 
+    cmdSubmitted[currCmd] = true;
+    currCmd = (currCmd + 1) % 2;
     return vkQueuePresentKHR(device.graphicsQueue, &presentInfo);
 }
 
@@ -128,7 +174,7 @@ Math::Vector2f RenderContext::WindowSize()
     return Math::Vector2f((float)surfaceCaps.currentExtent.width, (float)surfaceCaps.currentExtent.height);
 }
 
-bool RenderContext::RecreateSwapChain(const VkCommandPool &commandPool, const vk::RenderPass &renderPass)
+bool RenderContext::RecreateSwapChain()
 {
     vkDeviceWaitIdle(device.logical);
     DestroyFramebuffers();
@@ -139,9 +185,9 @@ bool RenderContext::RecreateSwapChain(const VkCommandPool &commandPool, const vk
     VK_VERIFY(vk::createSwapChain(device, m_surface, &swapChain, swapChain.sc));
 
     DestroyDepthBuffer();
-    CreateDepthBuffer(commandPool);
+    CreateDepthBuffer(m_commandPool);
     if (!CreateImageViews()) return false;
-    if (!CreateFramebuffers(renderPass)) return false;
+    if (!CreateFramebuffers(m_renderPass)) return false;
 
     return true;
 }
@@ -160,7 +206,14 @@ bool RenderContext::InitVulkan()
     VK_VERIFY(vk::createSwapChain(device, m_surface, &swapChain, VK_NULL_HANDLE));
 
     if (!CreateImageViews()) return false;
+    CreateFences();
     CreateSemaphores();
+
+    VK_VERIFY(vk::createRenderPass(device, swapChain, &m_renderPass));
+    VK_VERIFY(vk::createCommandPool(device, &m_commandPool));
+    // build the swap chain
+    RecreateSwapChain();
+    VK_VERIFY(vk::createCommandBuffers(device, m_commandPool, m_commandBuffers, frameBuffers.size()));
 
     return true;
 }
@@ -244,12 +297,25 @@ void RenderContext::DestroyFramebuffers()
     frameBuffers.clear();
 }
 
+void RenderContext::CreateFences()
+{
+    VkFenceCreateInfo fCreateInfo = {};
+    fCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+    for (int i = 0; i < 2; ++i)
+    {
+        VK_VERIFY(vkCreateFence(device.logical, &fCreateInfo, nullptr, &m_fences[i]));
+    }
+}
+
 void RenderContext::CreateSemaphores()
 {
     VkSemaphoreCreateInfo sCreateInfo = {};
     sCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-    VK_VERIFY(vkCreateSemaphore(device.logical, &sCreateInfo, nullptr, &m_imageAvailableSemaphore));
-    VK_VERIFY(vkCreateSemaphore(device.logical, &sCreateInfo, nullptr, &renderFinishedSemaphore));
-    VK_VERIFY(vkCreateSemaphore(device.logical, &sCreateInfo, nullptr, &renderUIFinishedSemaphore));
+    for (int i = 0; i < 2; ++i)
+    {
+        VK_VERIFY(vkCreateSemaphore(device.logical, &sCreateInfo, nullptr, &m_imageAvailableSemaphore[i]));
+        VK_VERIFY(vkCreateSemaphore(device.logical, &sCreateInfo, nullptr, &m_renderFinishedSemaphore[i]));
+    }
 }

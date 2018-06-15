@@ -36,13 +36,13 @@ public:
     // start rendering frame and setup all necessary structs
     VkResult RenderStart();
     // command buffer submission to render queue
-    VkResult Submit(const vk::CmdBufferList &commandBuffers);
+    VkResult Submit();
     // render queue presentation
-    VkResult Present(bool uiVisible);
+    VkResult Present();
     // fetch current renderable surface size directly from Vulkan surface
     Math::Vector2f WindowSize();
     // rebuild entire swap chain
-    bool RecreateSwapChain(const VkCommandPool &commandPool, const vk::RenderPass &renderPasss);
+    bool RecreateSwapChain();
 
     SDL_Window *window = nullptr;
 
@@ -50,9 +50,6 @@ public:
     vk::Device device;
     vk::SwapChain swapChain;
     std::vector<VkFramebuffer> frameBuffers;
-    VkSubmitInfo submitInfo = {};
-    VkSemaphore renderFinishedSemaphore;
-    VkSemaphore renderUIFinishedSemaphore;
 
     float fov = 75.f * PIdiv180;
     float nearPlane = 0.1f;
@@ -70,6 +67,10 @@ public:
     float top = 0.f;
 
     Math::Matrix4f ModelViewProjectionMatrix; // global MVP used to orient the entire world
+    vk::CmdBufferList m_commandBuffers;
+    uint32_t currCmd = 0;
+    vk::RenderPass m_renderPass;
+    VkCommandPool  m_commandPool = VK_NULL_HANDLE;
 private:
     bool InitVulkan();
     void CreateDepthBuffer(const VkCommandPool &commandPool);
@@ -78,6 +79,7 @@ private:
     void DestroyImageViews();
     bool CreateFramebuffers(const vk::RenderPass &renderPass);
     void DestroyFramebuffers();
+    void CreateFences();
     void CreateSemaphores();
 
     // Vulkan instance and surface
@@ -87,8 +89,12 @@ private:
     // Vulkan image views
     std::vector<VkImageView> m_imageViews;
 
+    // command buffer double buffering fences
+    VkFence m_fences[2];
     // semaphore: signal when next image is available for rendering
-    VkSemaphore m_imageAvailableSemaphore;
+    VkSemaphore m_imageAvailableSemaphore[2];
+    // semaphore: signal when rendering to current command buffer is complete
+    VkSemaphore m_renderFinishedSemaphore[2];
 
     // depth buffer texture
     vk::Texture m_depthBuffer;
