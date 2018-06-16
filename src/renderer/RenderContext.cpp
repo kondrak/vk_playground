@@ -46,10 +46,11 @@ void RenderContext::Destroy()
         TextureManager::GetInstance()->ReleaseTextures();
 
         vkDestroySwapchainKHR(device.logical, swapChain.sc, nullptr);
+
+        vkDestroySemaphore(device.logical, m_imageAvailableSemaphore, nullptr);
+        vkDestroySemaphore(device.logical, m_renderFinishedSemaphore, nullptr);
         for (int i = 0; i < NUM_CMDBUFFERS; ++i)
         {
-            vkDestroySemaphore(device.logical, m_imageAvailableSemaphore[i], nullptr);
-            vkDestroySemaphore(device.logical, m_renderFinishedSemaphore[i], nullptr);
             vkDestroyFence(device.logical, m_fences[i], nullptr);
         }
 
@@ -68,14 +69,14 @@ void RenderContext::Destroy()
 VkResult RenderContext::RenderStart()
 {
 #undef max
-    VkResult result = vkAcquireNextImageKHR(device.logical, swapChain.sc, UINT64_MAX, m_imageAvailableSemaphore[currCmd], VK_NULL_HANDLE, &m_imageIndex);
-
+    VkResult result = vkAcquireNextImageKHR(device.logical, swapChain.sc, UINT64_MAX, m_imageAvailableSemaphore, VK_NULL_HANDLE, &m_imageIndex);
+    activeCmdBuffer = m_commandBuffers[m_imageIndex];
     // swapchain has become incompatible - application has to recreate it
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
         return result;
 
-    VK_VERIFY(vkWaitForFences(device.logical, 1, &m_fences[currCmd], VK_TRUE, UINT64_MAX));
-    vkResetFences(device.logical, 1, &m_fences[currCmd]);
+    VK_VERIFY(vkWaitForFences(device.logical, 1, &m_fences[m_imageIndex], VK_TRUE, UINT64_MAX));
+    vkResetFences(device.logical, 1, &m_fences[m_imageIndex]);
 
     LOG_MESSAGE_ASSERT(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR, "Could not acquire swapchain image: " << result);
 
@@ -85,7 +86,7 @@ VkResult RenderContext::RenderStart()
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     beginInfo.pInheritanceInfo = nullptr;
 
-    result = vkBeginCommandBuffer(m_commandBuffers[currCmd], &beginInfo);
+    result = vkBeginCommandBuffer(m_commandBuffers[m_imageIndex], &beginInfo);
     LOG_MESSAGE_ASSERT(result == VK_SUCCESS, "Could not begin command buffer: " << result);
 
     VkClearValue clearColors[2];
@@ -100,29 +101,29 @@ VkResult RenderContext::RenderStart()
     renderBeginInfo.clearValueCount = 2;
     renderBeginInfo.pClearValues = clearColors;
 
-    vkCmdBeginRenderPass(m_commandBuffers[currCmd], &renderBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(m_commandBuffers[m_imageIndex], &renderBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
     return VK_SUCCESS;
 }
 
 VkResult RenderContext::Submit()
 {
-    vkCmdEndRenderPass(m_commandBuffers[currCmd]);
+    vkCmdEndRenderPass(m_commandBuffers[m_imageIndex]);
 
-    VkResult result = vkEndCommandBuffer(m_commandBuffers[currCmd]);
+    VkResult result = vkEndCommandBuffer(m_commandBuffers[m_imageIndex]);
     LOG_MESSAGE_ASSERT(result == VK_SUCCESS, "Error recording command buffer: " << result);
 
     VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores = &m_imageAvailableSemaphore[currCmd];
+    submitInfo.pWaitSemaphores = &m_imageAvailableSemaphore;
     submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = &m_renderFinishedSemaphore[currCmd];
+    submitInfo.pSignalSemaphores = &m_renderFinishedSemaphore;
     submitInfo.pWaitDstStageMask = waitStages;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &m_commandBuffers[currCmd];
+    submitInfo.pCommandBuffers = &m_commandBuffers[m_imageIndex];
 
-    return vkQueueSubmit(device.graphicsQueue, 1, &submitInfo, m_fences[currCmd]);
+    return vkQueueSubmit(device.graphicsQueue, 1, &submitInfo, m_fences[m_imageIndex]);
 }
 
 VkResult RenderContext::Present()
@@ -131,14 +132,12 @@ VkResult RenderContext::Present()
     VkPresentInfoKHR presentInfo = {};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = &m_renderFinishedSemaphore[currCmd];
+    presentInfo.pWaitSemaphores = &m_renderFinishedSemaphore;
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
     presentInfo.pImageIndices = &m_imageIndex;
     presentInfo.pResults = nullptr;
 
-    currCmd = (currCmd + 1) % NUM_CMDBUFFERS;
-    activeCmdBuffer = m_commandBuffers[currCmd];
     return vkQueuePresentKHR(device.graphicsQueue, &presentInfo);
 }
 
@@ -305,9 +304,6 @@ void RenderContext::CreateSemaphores()
     VkSemaphoreCreateInfo sCreateInfo = {};
     sCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-    for (int i = 0; i < NUM_CMDBUFFERS; ++i)
-    {
-        VK_VERIFY(vkCreateSemaphore(device.logical, &sCreateInfo, nullptr, &m_imageAvailableSemaphore[i]));
-        VK_VERIFY(vkCreateSemaphore(device.logical, &sCreateInfo, nullptr, &m_renderFinishedSemaphore[i]));
-    }
+    VK_VERIFY(vkCreateSemaphore(device.logical, &sCreateInfo, nullptr, &m_imageAvailableSemaphore));
+    VK_VERIFY(vkCreateSemaphore(device.logical, &sCreateInfo, nullptr, &m_renderFinishedSemaphore));
 }

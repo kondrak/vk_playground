@@ -95,15 +95,13 @@ private:
 
     // command buffers
     std::vector<VkCommandBuffer> m_commandBuffers;
-    // index to the active command buffer
-    uint32_t currCmd = 0;
 
     // command buffer double buffering fences
     VkFence m_fences[NUM_CMDBUFFERS];
     // semaphore: signal when next image is available for rendering
-    VkSemaphore m_imageAvailableSemaphore[NUM_CMDBUFFERS];
+    VkSemaphore m_imageAvailableSemaphore;
     // semaphore: signal when rendering to current command buffer is complete
-    VkSemaphore m_renderFinishedSemaphore[NUM_CMDBUFFERS];
+    VkSemaphore m_renderFinishedSemaphore;
 
     // depth buffer texture
     vk::Texture m_depthBuffer;
