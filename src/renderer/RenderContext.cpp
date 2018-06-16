@@ -6,8 +6,6 @@
 #include "Utils.hpp"
 #include <algorithm>
 
-bool RenderContext::cmdSubmitted[RenderContext::NUM_CMDBUFFERS];
-
 bool RenderContext::Init(const char *title, int x, int y, int w, int h)
 {
     window = SDL_CreateWindow(title, x, y, w, h, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN);
@@ -70,17 +68,14 @@ void RenderContext::Destroy()
 VkResult RenderContext::RenderStart()
 {
 #undef max
-    if (cmdSubmitted[currCmd])
-    {
-        VK_VERIFY(vkWaitForFences(device.logical, 1, &m_fences[currCmd], VK_TRUE, UINT64_MAX));
-    }
-    vkResetFences(device.logical, 1, &m_fences[currCmd]);
-    
     VkResult result = vkAcquireNextImageKHR(device.logical, swapChain.sc, UINT64_MAX, m_imageAvailableSemaphore[currCmd], VK_NULL_HANDLE, &m_imageIndex);
 
     // swapchain has become incompatible - application has to recreate it
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
         return result;
+
+    VK_VERIFY(vkWaitForFences(device.logical, 1, &m_fences[currCmd], VK_TRUE, UINT64_MAX));
+    vkResetFences(device.logical, 1, &m_fences[currCmd]);
 
     LOG_MESSAGE_ASSERT(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR, "Could not acquire swapchain image: " << result);
 
@@ -142,7 +137,6 @@ VkResult RenderContext::Present()
     presentInfo.pImageIndices = &m_imageIndex;
     presentInfo.pResults = nullptr;
 
-    cmdSubmitted[currCmd] = true;
     currCmd = (currCmd + 1) % NUM_CMDBUFFERS;
     activeCmdBuffer = m_commandBuffers[currCmd];
     return vkQueuePresentKHR(device.graphicsQueue, &presentInfo);
@@ -298,6 +292,7 @@ void RenderContext::CreateFences()
 {
     VkFenceCreateInfo fCreateInfo = {};
     fCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
     for (int i = 0; i < NUM_CMDBUFFERS; ++i)
     {

@@ -97,8 +97,6 @@ private:
     std::vector<VkCommandBuffer> m_commandBuffers;
     // index to the active command buffer
     uint32_t currCmd = 0;
-    // helper
-    static bool cmdSubmitted[NUM_CMDBUFFERS];
 
     // command buffer double buffering fences
     VkFence m_fences[NUM_CMDBUFFERS];
