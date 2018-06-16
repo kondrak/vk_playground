@@ -72,9 +72,9 @@ void Font::RenderText(const std::string &text, const Math::Vector3f &position, c
     Math::Vector3f pos = position;
 
     LOG_MESSAGE_ASSERT(m_charCount + text.length() < MAX_CHARS, "Too many chars");
-    m_charCount += text.length();
+    m_charCount += (int)text.length();
 
-    for (size_t i = 0; i < text.length(); i++)
+    for (int i = 0; i < text.length(); i++)
     {
         int cu = text[i] - 32;
 

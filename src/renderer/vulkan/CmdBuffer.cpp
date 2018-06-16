@@ -67,7 +67,7 @@ namespace vk
     {
         if (!commandBuffers.empty())
         {
-            vkFreeCommandBuffers(device.logical, commandPool, (size_t)commandBuffers.size(), commandBuffers.data());
+            vkFreeCommandBuffers(device.logical, commandPool, (uint32_t)commandBuffers.size(), commandBuffers.data());
             commandBuffers.clear();
         }
     }
