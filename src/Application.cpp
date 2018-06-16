@@ -50,7 +50,7 @@ void Application::OnStart(int argc, char **argv)
 {
     m_pipeline.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
-    m_texture = TextureManager::GetInstance()->LoadTexture("res/block_blue.png", g_renderContext.m_commandPool);
+    m_texture = TextureManager::GetInstance()->LoadTexture("res/block_blue.png", g_renderContext.commandPool);
 
     // create a common descriptor set layout and vertex buffer info
     m_vbInfo.bindingDescriptions.push_back(vk::getBindingDescription(sizeof(Vertex)));
@@ -72,12 +72,12 @@ void Application::OnStart(int argc, char **argv)
     const uint32_t indices[6] = { 0, 1, 2, 1, 3, 2 };
 
     // vertex buffer and index buffer with staging buffer
-    vk::createVertexBuffer(g_renderContext.device, g_renderContext.m_commandPool,
+    vk::createVertexBuffer(g_renderContext.device, g_renderContext.commandPool,
                            verts, sizeof(Vertex) * 4, &m_vertexBuffer);
-    vk::createIndexBuffer(g_renderContext.device, g_renderContext.m_commandPool,
+    vk::createIndexBuffer(g_renderContext.device, g_renderContext.commandPool,
                           indices, sizeof(uint32_t) * 6, &m_indexBuffer);
-    const vk::Texture *textureSet[1] = { *m_texture };
 
+    const vk::Texture *textureSet[1] = { *m_texture };
     CreateDescriptor(textureSet, &m_descriptor);
     RebuildPipelines();
 
@@ -314,18 +314,17 @@ void Application::RebuildPipelines()
 
     // todo: pipeline derivatives https://github.com/SaschaWillems/Vulkan/blob/master/examples/pipelines/pipelines.cpp
     const char *shaders[] = { "res/Basic_vert.spv", "res/Basic_frag.spv" };
-    VK_VERIFY(vk::createPipeline(g_renderContext.device, g_renderContext.swapChain, g_renderContext.m_renderPass, m_dsLayout, &m_vbInfo, &m_pipeline, shaders));
+    VK_VERIFY(vk::createPipeline(g_renderContext.device, g_renderContext.swapChain, g_renderContext.renderPass, m_dsLayout, &m_vbInfo, &m_pipeline, shaders));
 }
 
 void Application::Draw()
 {
-    VkCommandBuffer currBuff = g_renderContext.m_commandBuffers[g_renderContext.currCmd];
     // queue standard faces
-    vkCmdBindPipeline(currBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline.pipeline);
+    vkCmdBindPipeline(g_renderContext.activeCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline.pipeline);
 
     VkDeviceSize offsets[] = { 0 };
-    vkCmdBindVertexBuffers(currBuff, 0, 1, &m_vertexBuffer.buffer, offsets);
-    vkCmdBindIndexBuffer(currBuff, m_indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-    vkCmdBindDescriptorSets(currBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline.layout, 0, 1, &m_descriptor.set, 0, nullptr);
-    vkCmdDrawIndexed(currBuff, 6, 1, 0, 0, 0);
+    vkCmdBindVertexBuffers(g_renderContext.activeCmdBuffer, 0, 1, &m_vertexBuffer.buffer, offsets);
+    vkCmdBindIndexBuffer(g_renderContext.activeCmdBuffer, m_indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdBindDescriptorSets(g_renderContext.activeCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline.layout, 0, 1, &m_descriptor.set, 0, nullptr);
+    vkCmdDrawIndexed(g_renderContext.activeCmdBuffer, 6, 1, 0, 0, 0);
 }

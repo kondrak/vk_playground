@@ -49,7 +49,9 @@ public:
     // Vulkan global objects
     vk::Device device;
     vk::SwapChain swapChain;
-    std::vector<VkFramebuffer> frameBuffers;
+    vk::RenderPass renderPass;
+    VkCommandPool   commandPool = VK_NULL_HANDLE;
+    VkCommandBuffer activeCmdBuffer = VK_NULL_HANDLE;
 
     float fov = 75.f * PIdiv180;
     float nearPlane = 0.1f;
@@ -67,10 +69,6 @@ public:
     float top = 0.f;
 
     Math::Matrix4f ModelViewProjectionMatrix; // global MVP used to orient the entire world
-    vk::CmdBufferList m_commandBuffers;
-    uint32_t currCmd = 0;
-    vk::RenderPass m_renderPass;
-    VkCommandPool  m_commandPool = VK_NULL_HANDLE;
 private:
     bool InitVulkan();
     void CreateDepthBuffer(const VkCommandPool &commandPool);
@@ -82,19 +80,32 @@ private:
     void CreateFences();
     void CreateSemaphores();
 
+    // use 2 synchronized command buffers for rendering (double buffering)
+    static const int NUM_CMDBUFFERS = 2;
+
     // Vulkan instance and surface
     VkInstance   m_instance = VK_NULL_HANDLE;
     VkSurfaceKHR m_surface  = VK_NULL_HANDLE;
 
+    // Vulkan framebuffers
+    std::vector<VkFramebuffer> m_frameBuffers;
+
     // Vulkan image views
     std::vector<VkImageView> m_imageViews;
 
+    // command buffers
+    std::vector<VkCommandBuffer> m_commandBuffers;
+    // index to the active command buffer
+    uint32_t currCmd = 0;
+    // helper
+    static bool cmdSubmitted[NUM_CMDBUFFERS];
+
     // command buffer double buffering fences
-    VkFence m_fences[2];
+    VkFence m_fences[NUM_CMDBUFFERS];
     // semaphore: signal when next image is available for rendering
-    VkSemaphore m_imageAvailableSemaphore[2];
+    VkSemaphore m_imageAvailableSemaphore[NUM_CMDBUFFERS];
     // semaphore: signal when rendering to current command buffer is complete
-    VkSemaphore m_renderFinishedSemaphore[2];
+    VkSemaphore m_renderFinishedSemaphore[NUM_CMDBUFFERS];
 
     // depth buffer texture
     vk::Texture m_depthBuffer;

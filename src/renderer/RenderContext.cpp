@@ -6,22 +6,16 @@
 #include "Utils.hpp"
 #include <algorithm>
 
-static bool cmdSubmitted[2];
+bool RenderContext::cmdSubmitted[RenderContext::NUM_CMDBUFFERS];
 
 bool RenderContext::Init(const char *title, int x, int y, int w, int h)
 {
     window = SDL_CreateWindow(title, x, y, w, h, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN);
-
     SDL_GetWindowSize(window, &width, &height);
-
-    if (!InitVulkan())
-        return false;
 
     halfWidth  = width  >> 1;
     halfHeight = height >> 1;
-
-    scrRatio = (float)width / (float)height;
-
+    scrRatio   = (float)width / (float)height;
 /*
  *       ----(1.0)---
  *       |          |
@@ -34,7 +28,7 @@ bool RenderContext::Init(const char *title, int x, int y, int w, int h)
     bottom = -1.0f;
     top    = 1.0f;
 
-    return true;
+    return InitVulkan();
 }
 
 void RenderContext::Destroy()
@@ -43,9 +37,9 @@ void RenderContext::Destroy()
     {
         vkDeviceWaitIdle(device.logical);
 
-        vk::destroyRenderPass(device, m_renderPass);
-        vk::freeCommandBuffers(device, m_commandPool, m_commandBuffers);
-        vkDestroyCommandPool(device.logical, m_commandPool, nullptr);
+        vk::destroyRenderPass(device, renderPass);
+        vk::freeCommandBuffers(device, commandPool, m_commandBuffers);
+        vkDestroyCommandPool(device.logical, commandPool, nullptr);
  
         DestroyFramebuffers();
         DestroyImageViews();
@@ -54,7 +48,7 @@ void RenderContext::Destroy()
         TextureManager::GetInstance()->ReleaseTextures();
 
         vkDestroySwapchainKHR(device.logical, swapChain.sc, nullptr);
-        for (int i = 0; i < 2; ++i)
+        for (int i = 0; i < NUM_CMDBUFFERS; ++i)
         {
             vkDestroySemaphore(device.logical, m_imageAvailableSemaphore[i], nullptr);
             vkDestroySemaphore(device.logical, m_renderFinishedSemaphore[i], nullptr);
@@ -104,8 +98,8 @@ VkResult RenderContext::RenderStart()
     clearColors[1].depthStencil = { 1.0f, 0 };
     VkRenderPassBeginInfo renderBeginInfo = {};
     renderBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderBeginInfo.renderPass = m_renderPass.renderPass;
-    renderBeginInfo.framebuffer = frameBuffers[m_imageIndex];
+    renderBeginInfo.renderPass = renderPass.renderPass;
+    renderBeginInfo.framebuffer = m_frameBuffers[m_imageIndex];
     renderBeginInfo.renderArea.offset = { 0, 0 };
     renderBeginInfo.renderArea.extent = swapChain.extent;
     renderBeginInfo.clearValueCount = 2;
@@ -149,7 +143,8 @@ VkResult RenderContext::Present()
     presentInfo.pResults = nullptr;
 
     cmdSubmitted[currCmd] = true;
-    currCmd = (currCmd + 1) % 2;
+    currCmd = (currCmd + 1) % NUM_CMDBUFFERS;
+    activeCmdBuffer = m_commandBuffers[currCmd];
     return vkQueuePresentKHR(device.graphicsQueue, &presentInfo);
 }
 
@@ -185,9 +180,9 @@ bool RenderContext::RecreateSwapChain()
     VK_VERIFY(vk::createSwapChain(device, m_surface, &swapChain, swapChain.sc));
 
     DestroyDepthBuffer();
-    CreateDepthBuffer(m_commandPool);
+    CreateDepthBuffer(commandPool);
     if (!CreateImageViews()) return false;
-    if (!CreateFramebuffers(m_renderPass)) return false;
+    if (!CreateFramebuffers(renderPass)) return false;
 
     return true;
 }
@@ -209,11 +204,13 @@ bool RenderContext::InitVulkan()
     CreateFences();
     CreateSemaphores();
 
-    VK_VERIFY(vk::createRenderPass(device, swapChain, &m_renderPass));
-    VK_VERIFY(vk::createCommandPool(device, &m_commandPool));
+    VK_VERIFY(vk::createRenderPass(device, swapChain, &renderPass));
+    VK_VERIFY(vk::createCommandPool(device, &commandPool));
     // build the swap chain
     RecreateSwapChain();
-    VK_VERIFY(vk::createCommandBuffers(device, m_commandPool, m_commandBuffers, frameBuffers.size()));
+    VK_VERIFY(vk::createCommandBuffers(device, commandPool, m_commandBuffers, m_frameBuffers.size()));
+    // initialize active command buffer used by the application
+    activeCmdBuffer = m_commandBuffers[0];
 
     return true;
 }
@@ -259,7 +256,7 @@ void RenderContext::DestroyImageViews()
 
 bool RenderContext::CreateFramebuffers(const vk::RenderPass &renderPass)
 {
-    frameBuffers.resize(m_imageViews.size());
+    m_frameBuffers.resize(m_imageViews.size());
 
     for (size_t i = 0; i < m_imageViews.size(); ++i)
     {
@@ -274,7 +271,7 @@ bool RenderContext::CreateFramebuffers(const vk::RenderPass &renderPass)
         fbCreateInfo.height = swapChain.extent.height;
         fbCreateInfo.layers = 1;
 
-        VkResult result = vkCreateFramebuffer(device.logical, &fbCreateInfo, nullptr, &frameBuffers[i]);
+        VkResult result = vkCreateFramebuffer(device.logical, &fbCreateInfo, nullptr, &m_frameBuffers[i]);
 
         if (result != VK_SUCCESS)
         {
@@ -289,12 +286,12 @@ bool RenderContext::CreateFramebuffers(const vk::RenderPass &renderPass)
 
 void RenderContext::DestroyFramebuffers()
 {
-    for (VkImage &fb : frameBuffers)
+    for (VkImage &fb : m_frameBuffers)
     {
         vkDestroyFramebuffer(device.logical, fb, nullptr);
     }
 
-    frameBuffers.clear();
+    m_frameBuffers.clear();
 }
 
 void RenderContext::CreateFences()
@@ -302,7 +299,7 @@ void RenderContext::CreateFences()
     VkFenceCreateInfo fCreateInfo = {};
     fCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 
-    for (int i = 0; i < 2; ++i)
+    for (int i = 0; i < NUM_CMDBUFFERS; ++i)
     {
         VK_VERIFY(vkCreateFence(device.logical, &fCreateInfo, nullptr, &m_fences[i]));
     }
@@ -313,7 +310,7 @@ void RenderContext::CreateSemaphores()
     VkSemaphoreCreateInfo sCreateInfo = {};
     sCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-    for (int i = 0; i < 2; ++i)
+    for (int i = 0; i < NUM_CMDBUFFERS; ++i)
     {
         VK_VERIFY(vkCreateSemaphore(device.logical, &sCreateInfo, nullptr, &m_imageAvailableSemaphore[i]));
         VK_VERIFY(vkCreateSemaphore(device.logical, &sCreateInfo, nullptr, &m_renderFinishedSemaphore[i]));

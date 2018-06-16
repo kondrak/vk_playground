@@ -23,7 +23,7 @@ Font::Font(const char *tex) : m_scale(1.f, 1.f), m_position(0.0f, 0.0f, 0.0f), m
     m_pipeline.depthTestEnable = VK_FALSE;
 
     // load font texture
-    m_texture = TextureManager::GetInstance()->LoadTexture(tex, g_renderContext.m_commandPool, false);
+    m_texture = TextureManager::GetInstance()->LoadTexture(tex, g_renderContext.commandPool, false);
     LOG_MESSAGE_ASSERT(m_texture, "Could not load font texture: " << tex);
 
     // setup vertex attributes
@@ -33,7 +33,7 @@ Font::Font(const char *tex) : m_scale(1.f, 1.f), m_position(0.0f, 0.0f, 0.0f), m
     m_vbInfo.attributeDescriptions.push_back(vk::getAttributeDescription(inColor, VK_FORMAT_R32G32B32_SFLOAT, sizeof(float) * 5));
 
     // create vertex buffer and Vulkan descriptor
-    vk::createVertexBuffer(g_renderContext.device, g_renderContext.m_commandPool, &m_charBuffer, sizeof(Glyph) * MAX_CHARS, &m_vertexBuffer);
+    vk::createVertexBuffer(g_renderContext.device, g_renderContext.commandPool, &m_charBuffer, sizeof(Glyph) * MAX_CHARS, &m_vertexBuffer);
     CreateDescriptor(*m_texture, &m_descriptor);
 
     RebuildPipeline();
@@ -112,7 +112,7 @@ void Font::RebuildPipeline()
 
     // todo: pipeline derivatives https://github.com/SaschaWillems/Vulkan/blob/master/examples/pipelines/pipelines.cpp
     const char *shaders[] = { "res/Font_vert.spv", "res/Font_frag.spv" };
-    VK_VERIFY(vk::createPipeline(g_renderContext.device, g_renderContext.swapChain, g_renderContext.m_renderPass, m_descriptor.setLayout, &m_vbInfo, &m_pipeline, shaders));
+    VK_VERIFY(vk::createPipeline(g_renderContext.device, g_renderContext.swapChain, g_renderContext.renderPass, m_descriptor.setLayout, &m_vbInfo, &m_pipeline, shaders));
 }
 
 void Font::DrawChar(const Math::Vector3f &pos, int w, int h, int uo, int vo, int offset, const Math::Vector3f &color)
@@ -147,16 +147,15 @@ void Font::DrawChar(const Math::Vector3f &pos, int w, int h, int uo, int vo, int
 
 void Font::Draw()
 {
-    VkCommandBuffer currBuff = g_renderContext.m_commandBuffers[g_renderContext.currCmd];
-    vkCmdBindPipeline(currBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline.pipeline);
+    vkCmdBindPipeline(g_renderContext.activeCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline.pipeline);
 
     // queue all pending characters
     VkDeviceSize offsets[] = { 0 };
-    vkCmdBindVertexBuffers(currBuff, 0, 1, &m_vertexBuffer.buffer, offsets);
-    vkCmdBindDescriptorSets(currBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline.layout, 0, 1, &m_descriptor.set, 0, nullptr);
+    vkCmdBindVertexBuffers(g_renderContext.activeCmdBuffer, 0, 1, &m_vertexBuffer.buffer, offsets);
+    vkCmdBindDescriptorSets(g_renderContext.activeCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline.layout, 0, 1, &m_descriptor.set, 0, nullptr);
 
     for (int j = 0; j < m_charCount; j++)
-        vkCmdDraw(currBuff, 4, 1, j * 4, 0);
+        vkCmdDraw(g_renderContext.activeCmdBuffer, 4, 1, j * 4, 0);
 }
 
 void Font::CreateDescriptor(const vk::Texture *texture, vk::Descriptor *descriptor)

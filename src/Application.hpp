@@ -55,7 +55,6 @@ private:
     vk::Descriptor m_descriptor;
     GameTexture *m_texture = nullptr;
 
-    // all faces and patches use shared vertex buffer info and descriptor set layout
     vk::VertexBufferInfo  m_vbInfo;
     VkDescriptorSetLayout m_dsLayout;
 
