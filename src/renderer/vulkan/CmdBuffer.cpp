@@ -50,9 +50,9 @@ namespace vk
         return vkCreateCommandPool(device.logical, &cpCreateInfo, nullptr, commandPool);
     }
 
-    VkResult createCommandBuffers(const Device &device, const VkCommandPool &commandPool, std::vector<VkCommandBuffer> &commandBuffers, size_t fbCount)
+    VkResult createCommandBuffers(const Device &device, const VkCommandPool &commandPool, std::vector<VkCommandBuffer> &commandBuffers, size_t cmdBuffCount)
     {
-        commandBuffers.resize(fbCount);
+        commandBuffers.resize(cmdBuffCount);
 
         VkCommandBufferAllocateInfo allocInfo = {};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
