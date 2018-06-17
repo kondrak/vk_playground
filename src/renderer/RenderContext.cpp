@@ -6,6 +6,9 @@
 #include "Utils.hpp"
 #include <algorithm>
 
+// use 2 synchronized command buffers for rendering (double buffering)
+static const int NUM_CMDBUFFERS = 2;
+
 bool RenderContext::Init(const char *title, int x, int y, int w, int h)
 {
     window = SDL_CreateWindow(title, x, y, w, h, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN);
@@ -49,9 +52,9 @@ void RenderContext::Destroy()
 
         vkDestroySemaphore(device.logical, m_imageAvailableSemaphore, nullptr);
         vkDestroySemaphore(device.logical, m_renderFinishedSemaphore, nullptr);
-        for (int i = 0; i < NUM_CMDBUFFERS; ++i)
+        for (VkFence &fence : m_fences)
         {
-            vkDestroyFence(device.logical, m_fences[i], nullptr);
+            vkDestroyFence(device.logical, fence, nullptr);
         }
 
         vk::destroyAllocator(device.allocator);
@@ -71,6 +74,7 @@ VkResult RenderContext::RenderStart()
 #undef max
     VkResult result = vkAcquireNextImageKHR(device.logical, swapChain.sc, UINT64_MAX, m_imageAvailableSemaphore, VK_NULL_HANDLE, &m_imageIndex);
     activeCmdBuffer = m_commandBuffers[m_imageIndex];
+ 
     // swapchain has become incompatible - application has to recreate it
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
         return result;
@@ -201,9 +205,8 @@ bool RenderContext::InitVulkan()
     VK_VERIFY(vk::createCommandPool(device, &commandPool));
     // build the swap chain
     RecreateSwapChain();
-    VK_VERIFY(vk::createCommandBuffers(device, commandPool, m_commandBuffers, m_frameBuffers.size()));
-    // initialize active command buffer used by the application
-    activeCmdBuffer = m_commandBuffers[0];
+    // allocate 2 command buffers (used to be m_frameBuffers.size())
+    VK_VERIFY(vk::createCommandBuffers(device, commandPool, m_commandBuffers, NUM_CMDBUFFERS));
 
     return true;
 }
@@ -292,10 +295,11 @@ void RenderContext::CreateFences()
     VkFenceCreateInfo fCreateInfo = {};
     fCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    m_fences.resize(NUM_CMDBUFFERS);
 
-    for (int i = 0; i < NUM_CMDBUFFERS; ++i)
+    for (VkFence &fence : m_fences)
     {
-        VK_VERIFY(vkCreateFence(device.logical, &fCreateInfo, nullptr, &m_fences[i]));
+        VK_VERIFY(vkCreateFence(device.logical, &fCreateInfo, nullptr, &fence));
     }
 }
 

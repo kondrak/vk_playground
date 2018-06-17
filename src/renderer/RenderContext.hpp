@@ -80,9 +80,6 @@ private:
     void CreateFences();
     void CreateSemaphores();
 
-    // use 2 synchronized command buffers for rendering (double buffering)
-    static const int NUM_CMDBUFFERS = 2;
-
     // Vulkan instance and surface
     VkInstance   m_instance = VK_NULL_HANDLE;
     VkSurfaceKHR m_surface  = VK_NULL_HANDLE;
@@ -97,7 +94,7 @@ private:
     std::vector<VkCommandBuffer> m_commandBuffers;
 
     // command buffer double buffering fences
-    VkFence m_fences[NUM_CMDBUFFERS];
+    std::vector<VkFence> m_fences;
     // semaphore: signal when next image is available for rendering
     VkSemaphore m_imageAvailableSemaphore;
     // semaphore: signal when rendering to current command buffer is complete
