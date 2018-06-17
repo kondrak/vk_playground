@@ -30,7 +30,7 @@ void Application::OnWindowResize(int newWidth, int newHeight)
         g_renderContext.left  = -g_renderContext.scrRatio;
         g_renderContext.right =  g_renderContext.scrRatio;
 
-        g_renderContext.RecreateSwapChain(m_commandPool, m_renderPass);
+        g_renderContext.RecreateSwapChain();
         RebuildPipelines();
         m_debugOverlay->RebuildPipeline();
     }
@@ -50,13 +50,7 @@ void Application::OnStart(int argc, char **argv)
 {
     m_pipeline.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
-    VK_VERIFY(vk::createRenderPass(g_renderContext.device, g_renderContext.swapChain, &m_renderPass));
-    VK_VERIFY(vk::createCommandPool(g_renderContext.device, &m_commandPool));
-
-    // build the swap chain
-    g_renderContext.RecreateSwapChain(m_commandPool, m_renderPass);
-
-    m_texture = TextureManager::GetInstance()->LoadTexture("res/block_blue.png", m_commandPool);
+    m_texture = TextureManager::GetInstance()->LoadTexture("res/block_blue.png", g_renderContext.commandPool);
 
     // create a common descriptor set layout and vertex buffer info
     m_vbInfo.bindingDescriptions.push_back(vk::getBindingDescription(sizeof(Vertex)));
@@ -78,15 +72,14 @@ void Application::OnStart(int argc, char **argv)
     const uint32_t indices[6] = { 0, 1, 2, 1, 3, 2 };
 
     // vertex buffer and index buffer with staging buffer
-    vk::createVertexBuffer(g_renderContext.device, m_commandPool,
+    vk::createVertexBuffer(g_renderContext.device, g_renderContext.commandPool,
                            verts, sizeof(Vertex) * 4, &m_vertexBuffer);
-    vk::createIndexBuffer(g_renderContext.device, m_commandPool,
+    vk::createIndexBuffer(g_renderContext.device, g_renderContext.commandPool,
                           indices, sizeof(uint32_t) * 6, &m_indexBuffer);
+
     const vk::Texture *textureSet[1] = { *m_texture };
     CreateDescriptor(textureSet, &m_descriptor);
-
     RebuildPipelines();
-    VK_VERIFY(vk::createCommandBuffers(g_renderContext.device, m_commandPool, m_commandBuffers, g_renderContext.frameBuffers.size()));
 
     g_cameraDirector.AddCamera(Math::Vector3f(0.5f, 0.5f, 0.f),
                                Math::Vector3f(0.f, 1.f, 0.f),
@@ -108,7 +101,7 @@ void Application::OnRender()
     // incompatile swapchain - recreate it and skip this frame
     if (renderResult == VK_ERROR_OUT_OF_DATE_KHR)
     {
-        g_renderContext.RecreateSwapChain(m_commandPool, m_renderPass);
+        g_renderContext.RecreateSwapChain();
         RebuildPipelines();
         m_debugOverlay->RebuildPipeline();
         return;
@@ -120,15 +113,18 @@ void Application::OnRender()
     RenderQuad();
 
     // render debug overlay
-    bool overlayVisible = m_debugOverlay->OnRender();
+    m_debugOverlay->OnRender();
+
+    // submit graphics queue
+    VK_VERIFY(g_renderContext.Submit());
 
     // present!
-    renderResult = g_renderContext.Present(overlayVisible);
+    renderResult = g_renderContext.Present();
 
     // recreate swapchain if it's out of date
     if (renderResult == VK_ERROR_OUT_OF_DATE_KHR || renderResult == VK_SUBOPTIMAL_KHR)
     {
-        g_renderContext.RecreateSwapChain(m_commandPool, m_renderPass);
+        g_renderContext.RecreateSwapChain();
         RebuildPipelines();
         m_debugOverlay->RebuildPipeline();
     }
@@ -150,9 +146,7 @@ void Application::RenderQuad()
     vmaUnmapMemory(g_renderContext.device.allocator, m_uniformBuffer.allocation);
 
     // record new set of command buffers including only visible faces and patches
-    RecordCommandBuffers();
-
-    VK_VERIFY(g_renderContext.Submit(m_commandBuffers));
+    Draw();
 }
 
 void Application::OnTerminate()
@@ -163,9 +157,6 @@ void Application::OnTerminate()
     vk::freeBuffer(g_renderContext.device, m_uniformBuffer);
     vk::freeBuffer(g_renderContext.device, m_vertexBuffer);
     vk::freeBuffer(g_renderContext.device, m_indexBuffer);
-    vk::freeCommandBuffers(g_renderContext.device, m_commandPool, m_commandBuffers);
-    vk::destroyRenderPass(g_renderContext.device, m_renderPass);
-    vkDestroyCommandPool(g_renderContext.device.logical, m_commandPool, nullptr);
     vkDestroyDescriptorSetLayout(g_renderContext.device.logical, m_dsLayout, nullptr);
 
     delete m_debugOverlay;
@@ -323,47 +314,17 @@ void Application::RebuildPipelines()
 
     // todo: pipeline derivatives https://github.com/SaschaWillems/Vulkan/blob/master/examples/pipelines/pipelines.cpp
     const char *shaders[] = { "res/Basic_vert.spv", "res/Basic_frag.spv" };
-    VK_VERIFY(vk::createPipeline(g_renderContext.device, g_renderContext.swapChain, m_renderPass, m_dsLayout, &m_vbInfo, &m_pipeline, shaders));
+    VK_VERIFY(vk::createPipeline(g_renderContext.device, g_renderContext.swapChain, g_renderContext.renderPass, m_dsLayout, &m_vbInfo, &m_pipeline, shaders));
 }
 
-void Application::RecordCommandBuffers()
+void Application::Draw()
 {
-    for (size_t i = 0; i < m_commandBuffers.size(); ++i)
-    {
-        VkCommandBufferBeginInfo beginInfo = {};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-        beginInfo.pInheritanceInfo = nullptr;
+    // queue standard faces
+    vkCmdBindPipeline(g_renderContext.activeCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline.pipeline);
 
-        VkResult result = vkBeginCommandBuffer(m_commandBuffers[i], &beginInfo);
-        LOG_MESSAGE_ASSERT(result == VK_SUCCESS, "Could not begin command buffer: " << result);
-
-        VkClearValue clearColors[2];
-        clearColors[0].color = { 0.f, 0.f, 0.f, 1.f };
-        clearColors[1].depthStencil = { 1.0f, 0 };
-        VkRenderPassBeginInfo renderBeginInfo = {};
-        renderBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderBeginInfo.renderPass = m_renderPass.renderPass;
-        renderBeginInfo.framebuffer = g_renderContext.frameBuffers[i];
-        renderBeginInfo.renderArea.offset = { 0, 0 };
-        renderBeginInfo.renderArea.extent = g_renderContext.swapChain.extent;
-        renderBeginInfo.clearValueCount = 2;
-        renderBeginInfo.pClearValues = clearColors;
-
-        vkCmdBeginRenderPass(m_commandBuffers[i], &renderBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-        // queue standard faces
-        vkCmdBindPipeline(m_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline.pipeline);
-
-        VkDeviceSize offsets[] = { 0 };
-        vkCmdBindVertexBuffers(m_commandBuffers[i], 0, 1, &m_vertexBuffer.buffer, offsets);
-        vkCmdBindIndexBuffer(m_commandBuffers[i], m_indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdBindDescriptorSets(m_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline.layout, 0, 1, &m_descriptor.set, 0, nullptr);
-        vkCmdDrawIndexed(m_commandBuffers[i], 6, 1, 0, 0, 0);
-
-        vkCmdEndRenderPass(m_commandBuffers[i]);
-
-        result = vkEndCommandBuffer(m_commandBuffers[i]);
-        LOG_MESSAGE_ASSERT(result == VK_SUCCESS, "Error recording command buffer: " << result);
-    }
+    VkDeviceSize offsets[] = { 0 };
+    vkCmdBindVertexBuffers(g_renderContext.activeCmdBuffer, 0, 1, &m_vertexBuffer.buffer, offsets);
+    vkCmdBindIndexBuffer(g_renderContext.activeCmdBuffer, m_indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdBindDescriptorSets(g_renderContext.activeCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline.layout, 0, 1, &m_descriptor.set, 0, nullptr);
+    vkCmdDrawIndexed(g_renderContext.activeCmdBuffer, 6, 1, 0, 0, 0);
 }

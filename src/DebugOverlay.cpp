@@ -6,14 +6,12 @@ void DebugOverlay::OnUpdate( float dt )
         m_fpsCounter.OnFrameStart(dt);
 }
 
-bool DebugOverlay::OnRender()
+void DebugOverlay::OnRender()
 {
     if (m_debugFlags & DEBUG_SHOW_FPS)
     {
         m_fpsCounter.OnRender();
     }
-
-    return m_debugFlags != DEBUG_NONE;
 }
 
 void DebugOverlay::OnKeyPress( KeyCode key )

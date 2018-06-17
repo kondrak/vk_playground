@@ -37,7 +37,7 @@ private:
     inline void SetKeyPressed(KeyCode key, bool pressed) { m_keyStates[key] = pressed; }
 
     bool m_running     = true;    // application is running
-    bool m_noRedraw    = false;   //  do not perform window redraw
+    bool m_noRedraw    = false;   // do not perform window redraw
 
     std::map<KeyCode, bool> m_keyStates;
 
@@ -45,20 +45,16 @@ private:
     void CreateDescriptorSetLayout();
     void CreateDescriptor(const vk::Texture **textures, vk::Descriptor *descriptor);
     void RebuildPipelines();
-    void RecordCommandBuffers();
+    void Draw();
 
     UniformBufferObject m_ubo;
     vk::Buffer m_uniformBuffer;
     vk::Buffer m_vertexBuffer;
     vk::Buffer m_indexBuffer;
     vk::Pipeline   m_pipeline; // used for rendering standard faces
-    vk::RenderPass m_renderPass;
-    VkCommandPool  m_commandPool = VK_NULL_HANDLE;
-    vk::CmdBufferList m_commandBuffers;
     vk::Descriptor m_descriptor;
     GameTexture *m_texture = nullptr;
 
-    // all faces and patches use shared vertex buffer info and descriptor set layout
     vk::VertexBufferInfo  m_vbInfo;
     VkDescriptorSetLayout m_dsLayout;
 
