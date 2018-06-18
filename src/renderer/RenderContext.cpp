@@ -59,7 +59,7 @@ void RenderContext::Destroy()
  
         DestroyFramebuffers();
         DestroyImageViews();
-        DestroyDepthBuffer();
+        DestroyRenderBuffers();
 
         TextureManager::GetInstance()->ReleaseTextures();
 
@@ -191,10 +191,10 @@ bool RenderContext::RecreateSwapChain()
     swapChain.extent = { (uint32_t)width, (uint32_t)height };
     VK_VERIFY(vk::createSwapChain(device, m_surface, &swapChain, swapChain.sc));
 
-    DestroyDepthBuffer();
-    CreateDepthBuffer(commandPool);
+    DestroyRenderBuffers();
+    CreateRenderBuffers();
     if (!CreateImageViews()) return false;
-    if (!CreateFramebuffers(renderPass)) return false;
+    if (!CreateFramebuffers()) return false;
 
     return true;
 }
@@ -216,6 +216,8 @@ bool RenderContext::InitVulkan()
     CreateFences();
     CreateSemaphores();
 
+    msaaSamples = getMaxUsableSampleCount(device.properties);
+    renderPass.sampleCount = msaaSamples;
     VK_VERIFY(vk::createRenderPass(device, swapChain, &renderPass));
     VK_VERIFY(vk::createCommandPool(device, &commandPool));
     // build the swap chain
@@ -226,9 +228,23 @@ bool RenderContext::InitVulkan()
     return true;
 }
 
-void RenderContext::CreateDepthBuffer(const VkCommandPool &commandPool)
+void RenderContext::CreateRenderBuffers()
 {
-    m_depthBuffer = vk::createDepthBuffer(device, swapChain, commandPool);
+    CreateDepthBuffer();
+    if(msaaSamples != VK_SAMPLE_COUNT_1_BIT)
+        CreateMSAABuffers();
+}
+
+void RenderContext::DestroyRenderBuffers()
+{
+    DestroyDepthBuffer();
+    if (msaaSamples != VK_SAMPLE_COUNT_1_BIT)
+        DestroyMSAABuffers();
+}
+
+void RenderContext::CreateDepthBuffer()
+{
+    m_depthBuffer = vk::createDepthBuffer(device, swapChain, commandPool, VK_SAMPLE_COUNT_1_BIT);
 }
 
 void RenderContext::DestroyDepthBuffer()
@@ -237,6 +253,27 @@ void RenderContext::DestroyDepthBuffer()
     {
         vmaDestroyImage(device.allocator, m_depthBuffer.image, m_depthBuffer.allocation);
         vkDestroyImageView(device.logical, m_depthBuffer.imageView, nullptr);
+    }
+}
+
+void RenderContext::CreateMSAABuffers()
+{
+    m_msaaColor = vk::createColorBuffer(device, swapChain, commandPool, msaaSamples);
+    m_msaaDepth = vk::createDepthBuffer(device, swapChain, commandPool, msaaSamples);
+}
+
+void RenderContext::DestroyMSAABuffers()
+{
+    if (m_msaaColor.image != VK_NULL_HANDLE)
+    {
+        vmaDestroyImage(device.allocator, m_msaaColor.image, m_msaaColor.allocation);
+        vkDestroyImageView(device.logical, m_msaaColor.imageView, nullptr);
+    }
+
+    if (m_msaaDepth.image != VK_NULL_HANDLE)
+    {
+        vmaDestroyImage(device.allocator, m_msaaDepth.image, m_msaaDepth.allocation);
+        vkDestroyImageView(device.logical, m_msaaDepth.imageView, nullptr);
     }
 }
 
@@ -265,23 +302,24 @@ void RenderContext::DestroyImageViews()
         vkDestroyImageView(device.logical, iv, nullptr);
 }
 
-bool RenderContext::CreateFramebuffers(const vk::RenderPass &renderPass)
+bool RenderContext::CreateFramebuffers()
 {
     m_frameBuffers.resize(m_imageViews.size());
 
-    for (size_t i = 0; i < m_imageViews.size(); ++i)
+    VkFramebufferCreateInfo fbCreateInfo = {};
+    fbCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    fbCreateInfo.renderPass = renderPass.renderPass;
+    fbCreateInfo.attachmentCount = (msaaSamples != VK_SAMPLE_COUNT_1_BIT) ? 4 : 2;
+    fbCreateInfo.width = swapChain.extent.width;
+    fbCreateInfo.height = swapChain.extent.height;
+    fbCreateInfo.layers = 1;
+
+    for (size_t i = 0; i < m_frameBuffers.size(); ++i)
     {
         VkImageView attachments[] = { m_imageViews[i], m_depthBuffer.imageView };
+        VkImageView attachmentsMSAA[] = { m_msaaColor.imageView, m_msaaDepth.imageView, m_imageViews[i], m_depthBuffer.imageView };
 
-        VkFramebufferCreateInfo fbCreateInfo = {};
-        fbCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        fbCreateInfo.renderPass = renderPass.renderPass;
-        fbCreateInfo.attachmentCount = 2;
-        fbCreateInfo.pAttachments = attachments;
-        fbCreateInfo.width = swapChain.extent.width;
-        fbCreateInfo.height = swapChain.extent.height;
-        fbCreateInfo.layers = 1;
-
+        fbCreateInfo.pAttachments = (msaaSamples != VK_SAMPLE_COUNT_1_BIT) ? attachmentsMSAA : attachments;
         VkResult result = vkCreateFramebuffer(device.logical, &fbCreateInfo, nullptr, &m_frameBuffers[i]);
 
         if (result != VK_SUCCESS)

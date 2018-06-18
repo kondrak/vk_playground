@@ -52,6 +52,7 @@ public:
     vk::RenderPass renderPass;
     VkCommandPool   commandPool = VK_NULL_HANDLE;
     VkCommandBuffer activeCmdBuffer = VK_NULL_HANDLE;
+    VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
 
     float fov = 75.f * PIdiv180;
     float nearPlane = 0.1f;
@@ -70,12 +71,16 @@ public:
 
     Math::Matrix4f ModelViewProjectionMatrix; // global MVP used to orient the entire world
 private:
-    bool InitVulkan();
-    void CreateDepthBuffer(const VkCommandPool &commandPool);
+    bool InitVulkan(); 
+    void CreateRenderBuffers();
+    void DestroyRenderBuffers();
+    void CreateDepthBuffer();
     void DestroyDepthBuffer();
+    void CreateMSAABuffers();
+    void DestroyMSAABuffers();
     bool CreateImageViews();
     void DestroyImageViews();
-    bool CreateFramebuffers(const vk::RenderPass &renderPass);
+    bool CreateFramebuffers();
     void DestroyFramebuffers();
     void CreateFences();
     void CreateSemaphores();
@@ -102,6 +107,9 @@ private:
 
     // depth buffer texture
     vk::Texture m_depthBuffer;
+
+    vk::Texture m_msaaColor;
+    vk::Texture m_msaaDepth;
 
     // handle submission from multiple render passes
     uint32_t m_imageIndex;
