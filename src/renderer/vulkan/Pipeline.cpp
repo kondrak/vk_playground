@@ -227,6 +227,7 @@ namespace vk
         colorAttachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         colorAttachmentDesc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         colorAttachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        // treat this attachment as an interim color stage if MSAA is enabled
         if (msaaEnabled)
             colorAttachmentDesc.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         else
@@ -242,6 +243,7 @@ namespace vk
         depthAttachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         depthAttachmentDesc.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
+        // resolve color and depth targets used if MSAA is enabled
         VkAttachmentDescription colorAttachmentResolveMSAA = {};
         colorAttachmentResolveMSAA.format = swapChain.format;
         colorAttachmentResolveMSAA.samples = VK_SAMPLE_COUNT_1_BIT;
