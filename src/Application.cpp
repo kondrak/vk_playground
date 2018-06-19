@@ -180,6 +180,14 @@ void Application::OnKeyPress(KeyCode key)
     case KEY_ESC:
         Terminate();
         break;
+    case KEY_F10:
+    {
+        int numSamples = (int)g_renderContext.ToggleMSAA();
+        RebuildPipelines();
+        m_debugOverlay->SetMSAASamples(numSamples);
+        m_debugOverlay->RebuildPipeline();
+    }
+        break;
     default:
         break;
     }
@@ -309,7 +317,6 @@ void Application::CreateDescriptor(const vk::Texture **textures, vk::Descriptor 
 
 void Application::RebuildPipelines()
 {
-    vkDeviceWaitIdle(g_renderContext.device.logical);
     vk::destroyPipeline(g_renderContext.device, m_pipeline);
 
     // todo: pipeline derivatives https://github.com/SaschaWillems/Vulkan/blob/master/examples/pipelines/pipelines.cpp

@@ -5,16 +5,16 @@
 #include "InputHandlers.hpp"
 #include <sstream>
 
-class FPSCounter
+class OverlayText
 {
 public:
-    FPSCounter() : m_numFrames( 0 ), m_numFramesToDraw( 1 ), m_time( 0.f )
+    OverlayText() : m_numFrames(0), m_numFramesToDraw(1), m_numMSAASamples(1), m_time(0.f)
     {
         m_font = new Font( "res/font.png" );
         m_font->SetScale(Math::Vector2f(2.f, 2.f));
     }
 
-    ~FPSCounter()
+    ~OverlayText()
     {
         delete m_font;
     }
@@ -29,11 +29,14 @@ public:
     {
         m_font->RenderStart();
 
-        std::stringstream sstream, sstream2;
+        std::stringstream sstream, sstream2, sstream3;
         sstream << m_numFramesToDraw << " FPS";
         sstream2 << 1000.f / m_numFramesToDraw << " ms";
-        m_font->RenderText( sstream.str().c_str(), -1.0f, 1.0f );
-        m_font->RenderText( sstream2.str().c_str(), -1.0f, 0.95f );
+        sstream3 << "MSAA:x" << m_numMSAASamples;
+
+        m_font->RenderText(sstream.str(), -1.0f, 1.0f );
+        m_font->RenderText(sstream2.str(), -1.0f, 0.95f );
+        m_font->RenderText(sstream3.str(), -1.0f, 0.90f);
 
         if (m_time > .25f)
         {
@@ -42,6 +45,11 @@ public:
             m_time = 0.f;
         }
         m_font->RenderFinish();
+    }
+
+    void SetMSAASamples(int samples)
+    {
+        m_numMSAASamples = samples;
     }
 
     void RebuildPipeline()
@@ -53,6 +61,7 @@ private:
     Font *m_font;
     int m_numFrames;
     int m_numFramesToDraw;
+    int m_numMSAASamples;
     float m_time;
 };
 
@@ -74,9 +83,10 @@ public:
     void OnRender();
     void OnKeyPress( KeyCode key );
     bool DebugFlagSet( DebugFlag df ) { return ( m_debugFlags & df ) != 0; }
-    void RebuildPipeline() { m_fpsCounter.RebuildPipeline(); }
+    void SetMSAASamples(int samples) { m_text.SetMSAASamples(samples); }
+    void RebuildPipeline() { m_text.RebuildPipeline(); }
 private:
-    FPSCounter m_fpsCounter;
+    OverlayText m_text;
     int  m_debugFlags;
 };
 
