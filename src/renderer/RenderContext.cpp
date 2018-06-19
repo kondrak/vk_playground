@@ -181,6 +181,19 @@ Math::Vector2f RenderContext::WindowSize()
     return Math::Vector2f((float)surfaceCaps.currentExtent.width, (float)surfaceCaps.currentExtent.height);
 }
 
+// would be nicer to use a separate render pass instead of recreating the existing one!
+VkSampleCountFlagBits RenderContext::ToggleMSAA()
+{
+    vkDeviceWaitIdle(device.logical);
+    vk::destroyRenderPass(device, renderPass);
+    m_msaaSamples = (m_msaaSamples == VK_SAMPLE_COUNT_1_BIT) ? getMaxUsableSampleCount(device.properties) : VK_SAMPLE_COUNT_1_BIT;
+    renderPass.sampleCount = m_msaaSamples;
+    VK_VERIFY(vk::createRenderPass(device, swapChain, &renderPass));
+    RecreateSwapChain();
+
+    return m_msaaSamples;
+}
+
 bool RenderContext::RecreateSwapChain()
 {
     vkDeviceWaitIdle(device.logical);
@@ -215,8 +228,6 @@ bool RenderContext::InitVulkan()
     CreateFences();
     CreateSemaphores();
 
-    m_msaaSamples = getMaxUsableSampleCount(device.properties);
-    renderPass.sampleCount = m_msaaSamples;
     VK_VERIFY(vk::createRenderPass(device, swapChain, &renderPass));
     VK_VERIFY(vk::createCommandPool(device, &commandPool));
     CreateDrawBuffers();

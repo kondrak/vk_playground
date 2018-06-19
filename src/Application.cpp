@@ -180,6 +180,14 @@ void Application::OnKeyPress(KeyCode key)
     case KEY_ESC:
         Terminate();
         break;
+    case KEY_F10:
+    {
+        int numSamples = (int)g_renderContext.ToggleMSAA();
+        RebuildPipelines();
+        m_debugOverlay->SetMSAASamples(numSamples);
+        m_debugOverlay->RebuildPipeline();
+    }
+        break;
     default:
         break;
     }

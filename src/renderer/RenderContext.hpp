@@ -43,6 +43,8 @@ public:
     Math::Vector2f WindowSize();
     // rebuild entire swap chain
     bool RecreateSwapChain();
+    // toggle MSAA on/off, return current setting
+    VkSampleCountFlagBits ToggleMSAA();
 
     SDL_Window *window = nullptr;
 
