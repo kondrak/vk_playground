@@ -128,12 +128,11 @@ namespace vk
         VkPipelineMultisampleStateCreateInfo  msCreateInfo = {};
         msCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
         msCreateInfo.sampleShadingEnable = VK_FALSE;
-        msCreateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+        msCreateInfo.rasterizationSamples = renderPass.sampleCount;
         msCreateInfo.minSampleShading = 1.f;
         msCreateInfo.pSampleMask = nullptr;
         msCreateInfo.alphaToCoverageEnable = VK_FALSE;
         msCreateInfo.alphaToOneEnable = VK_FALSE;
-        msCreateInfo.rasterizationSamples = renderPass.sampleCount;
 
         VkPipelineDepthStencilStateCreateInfo dCreateInfo = {};
         dCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
