@@ -233,7 +233,7 @@ void RenderContext::CreateDrawBuffers()
     // standard depth buffer
     m_depthBuffer = vk::createDepthBuffer(device, swapChain, commandPool, VK_SAMPLE_COUNT_1_BIT);
 
-    // additional render targets for MSAA if it's enabled
+    // additional render targets for MSAA (if enabled)
     if (m_msaaSamples != VK_SAMPLE_COUNT_1_BIT)
         CreateMSAABuffers();
 }
