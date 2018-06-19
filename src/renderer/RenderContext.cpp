@@ -59,7 +59,7 @@ void RenderContext::Destroy()
  
         DestroyFramebuffers();
         DestroyImageViews();
-        DestroyRenderBuffers();
+        DestroyDrawBuffers();
 
         TextureManager::GetInstance()->ReleaseTextures();
 
@@ -187,12 +187,12 @@ bool RenderContext::RecreateSwapChain()
     DestroyFramebuffers();
     DestroyImageViews();
 
-    // set initial swap chain extent to current window size - in case WM won't be able to determine it by itself
+    // set initial swap chain extent to current window size - in case WM can't determine it by itself
     swapChain.extent = { (uint32_t)width, (uint32_t)height };
     VK_VERIFY(vk::createSwapChain(device, m_surface, &swapChain, swapChain.sc));
 
-    DestroyRenderBuffers();
-    CreateRenderBuffers();
+    DestroyDrawBuffers();
+    CreateDrawBuffers();
     if (!CreateImageViews()) return false;
     if (!CreateFramebuffers()) return false;
 
@@ -208,58 +208,52 @@ bool RenderContext::InitVulkan()
 
     device = vk::createDevice(m_instance, m_surface);
     VK_VERIFY(vk::createAllocator(device, &device.allocator));
-    // set initial swap chain extent to current window size - in case WM won't be able to determine it by itself
+    // set initial swap chain extent to current window size - in case WM can't determine it by itself
     swapChain.extent = { (uint32_t)width, (uint32_t)height };
     VK_VERIFY(vk::createSwapChain(device, m_surface, &swapChain, VK_NULL_HANDLE));
 
-    if (!CreateImageViews()) return false;
     CreateFences();
     CreateSemaphores();
 
-    msaaSamples = getMaxUsableSampleCount(device.properties);
-    renderPass.sampleCount = msaaSamples;
+    m_msaaSamples = getMaxUsableSampleCount(device.properties);
+    renderPass.sampleCount = m_msaaSamples;
     VK_VERIFY(vk::createRenderPass(device, swapChain, &renderPass));
     VK_VERIFY(vk::createCommandPool(device, &commandPool));
-    // build the swap chain
-    RecreateSwapChain();
+    CreateDrawBuffers();
+    if (!CreateImageViews()) return false;
+    if (!CreateFramebuffers()) return false;
     // allocate 2 command buffers (used to be m_frameBuffers.size())
     VK_VERIFY(vk::createCommandBuffers(device, commandPool, m_commandBuffers, NUM_CMDBUFFERS));
 
     return true;
 }
 
-void RenderContext::CreateRenderBuffers()
+void RenderContext::CreateDrawBuffers()
 {
-    CreateDepthBuffer();
-    if(msaaSamples != VK_SAMPLE_COUNT_1_BIT)
+    // standard depth buffer
+    m_depthBuffer = vk::createDepthBuffer(device, swapChain, commandPool, VK_SAMPLE_COUNT_1_BIT);
+
+    // additional render targets for MSAA if it's enabled
+    if (m_msaaSamples != VK_SAMPLE_COUNT_1_BIT)
         CreateMSAABuffers();
 }
 
-void RenderContext::DestroyRenderBuffers()
-{
-    DestroyDepthBuffer();
-    if (msaaSamples != VK_SAMPLE_COUNT_1_BIT)
-        DestroyMSAABuffers();
-}
-
-void RenderContext::CreateDepthBuffer()
-{
-    m_depthBuffer = vk::createDepthBuffer(device, swapChain, commandPool, VK_SAMPLE_COUNT_1_BIT);
-}
-
-void RenderContext::DestroyDepthBuffer()
+void RenderContext::DestroyDrawBuffers()
 {
     if (m_depthBuffer.image != VK_NULL_HANDLE)
     {
         vmaDestroyImage(device.allocator, m_depthBuffer.image, m_depthBuffer.allocation);
         vkDestroyImageView(device.logical, m_depthBuffer.imageView, nullptr);
     }
+
+    if (m_msaaSamples != VK_SAMPLE_COUNT_1_BIT)
+        DestroyMSAABuffers();
 }
 
 void RenderContext::CreateMSAABuffers()
 {
-    m_msaaColor = vk::createColorBuffer(device, swapChain, commandPool, msaaSamples);
-    m_msaaDepth = vk::createDepthBuffer(device, swapChain, commandPool, msaaSamples);
+    m_msaaColor = vk::createColorBuffer(device, swapChain, commandPool, m_msaaSamples);
+    m_msaaDepth = vk::createDepthBuffer(device, swapChain, commandPool, m_msaaSamples);
 }
 
 void RenderContext::DestroyMSAABuffers()
@@ -309,7 +303,7 @@ bool RenderContext::CreateFramebuffers()
     VkFramebufferCreateInfo fbCreateInfo = {};
     fbCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     fbCreateInfo.renderPass = renderPass.renderPass;
-    fbCreateInfo.attachmentCount = (msaaSamples != VK_SAMPLE_COUNT_1_BIT) ? 4 : 2;
+    fbCreateInfo.attachmentCount = (m_msaaSamples != VK_SAMPLE_COUNT_1_BIT) ? 4 : 2;
     fbCreateInfo.width = swapChain.extent.width;
     fbCreateInfo.height = swapChain.extent.height;
     fbCreateInfo.layers = 1;
@@ -319,7 +313,7 @@ bool RenderContext::CreateFramebuffers()
         VkImageView attachments[] = { m_imageViews[i], m_depthBuffer.imageView };
         VkImageView attachmentsMSAA[] = { m_msaaColor.imageView, m_msaaDepth.imageView, m_imageViews[i], m_depthBuffer.imageView };
 
-        fbCreateInfo.pAttachments = (msaaSamples != VK_SAMPLE_COUNT_1_BIT) ? attachmentsMSAA : attachments;
+        fbCreateInfo.pAttachments = (m_msaaSamples != VK_SAMPLE_COUNT_1_BIT) ? attachmentsMSAA : attachments;
         VkResult result = vkCreateFramebuffer(device.logical, &fbCreateInfo, nullptr, &m_frameBuffers[i]);
 
         if (result != VK_SUCCESS)
