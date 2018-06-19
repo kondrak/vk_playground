@@ -255,10 +255,11 @@ void RenderContext::DestroyDrawBuffers()
     {
         vmaDestroyImage(device.allocator, m_depthBuffer.image, m_depthBuffer.allocation);
         vkDestroyImageView(device.logical, m_depthBuffer.imageView, nullptr);
+        m_depthBuffer.image = VK_NULL_HANDLE;
+        m_depthBuffer.imageView = VK_NULL_HANDLE;
     }
 
-    if (m_msaaSamples != VK_SAMPLE_COUNT_1_BIT)
-        DestroyMSAABuffers();
+    DestroyMSAABuffers();
 }
 
 void RenderContext::CreateMSAABuffers()
@@ -273,12 +274,16 @@ void RenderContext::DestroyMSAABuffers()
     {
         vmaDestroyImage(device.allocator, m_msaaColor.image, m_msaaColor.allocation);
         vkDestroyImageView(device.logical, m_msaaColor.imageView, nullptr);
+        m_msaaColor.image = VK_NULL_HANDLE;
+        m_msaaColor.imageView = VK_NULL_HANDLE;
     }
 
     if (m_msaaDepth.image != VK_NULL_HANDLE)
     {
         vmaDestroyImage(device.allocator, m_msaaDepth.image, m_msaaDepth.allocation);
         vkDestroyImageView(device.logical, m_msaaDepth.imageView, nullptr);
+        m_msaaDepth.image = VK_NULL_HANDLE;
+        m_msaaDepth.imageView = VK_NULL_HANDLE;
     }
 }
 
