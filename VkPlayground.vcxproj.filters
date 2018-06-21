@@ -84,6 +84,9 @@
     <ClCompile Include="src\DebugOverlay.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\renderer\vulkan\VkCommon.cpp">
+      <Filter>Source Files\renderer\vulkan</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Application.hpp">
