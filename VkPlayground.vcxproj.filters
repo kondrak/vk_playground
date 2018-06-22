@@ -84,7 +84,7 @@
     <ClCompile Include="src\DebugOverlay.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\renderer\vulkan\VkCommon.cpp">
+    <ClCompile Include="src\renderer\vulkan\VkMemAlloc.cpp">
       <Filter>Source Files\renderer\vulkan</Filter>
     </ClCompile>
   </ItemGroup>
