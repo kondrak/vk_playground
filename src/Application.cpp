@@ -162,8 +162,8 @@ void Application::OnKeyPress(KeyCode key)
     {
         int numSamples = (int)g_renderContext.ToggleMSAA();
         RebuildPipelines();
-        m_debugOverlay->SetMSAASamples(numSamples);
         m_debugOverlay->RebuildPipeline();
+        m_debugOverlay->SetMSAASamples(numSamples);
     }
         break;
     default:
