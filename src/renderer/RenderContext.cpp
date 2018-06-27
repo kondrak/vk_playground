@@ -88,9 +88,13 @@ VkResult RenderContext::RenderStart()
     VkResult result = vkAcquireNextImageKHR(device.logical, swapChain.sc, UINT64_MAX, m_imageAvailableSemaphore, VK_NULL_HANDLE, &m_imageIndex);
     activeCmdBuffer = m_commandBuffers[m_imageIndex];
  
-    // swapchain has become incompatible - application has to recreate it
+    // swapchain has become incompatible - need to recreate it
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        LOG_MESSAGE("SwapChain incompatible after vkAcquireNextImageKHR - rebuilding!");
+        RecreateSwapChain();
         return result;
+    }
 
     VK_VERIFY(vkWaitForFences(device.logical, 1, &m_fences[m_imageIndex], VK_TRUE, UINT64_MAX));
     vkResetFences(device.logical, 1, &m_fences[m_imageIndex]);
@@ -119,6 +123,22 @@ VkResult RenderContext::RenderStart()
     renderBeginInfo.pClearValues = clearColors;
 
     vkCmdBeginRenderPass(m_commandBuffers[m_imageIndex], &renderBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+    VkViewport viewport = {};
+    viewport.x = 0.f;
+    viewport.y = 0.f;
+    viewport.width = (float)swapChain.extent.width;
+    viewport.height = (float)swapChain.extent.height;
+    viewport.minDepth = 0.f;
+    viewport.maxDepth = 1.f;
+
+    VkRect2D scissor = {};
+    scissor.offset.x = 0;
+    scissor.offset.y = 0;
+    scissor.extent = swapChain.extent;
+
+    vkCmdSetViewport(m_commandBuffers[m_imageIndex], 0, 1, &viewport);
+    vkCmdSetScissor(m_commandBuffers[m_imageIndex], 0, 1, &scissor);
     return VK_SUCCESS;
 }
 
@@ -155,7 +175,16 @@ VkResult RenderContext::Present()
     presentInfo.pImageIndices = &m_imageIndex;
     presentInfo.pResults = nullptr;
 
-    return vkQueuePresentKHR(device.graphicsQueue, &presentInfo);
+    VkResult renderResult = vkQueuePresentKHR(device.graphicsQueue, &presentInfo);
+
+    // recreate swapchain if it's out of date
+    if (renderResult == VK_ERROR_OUT_OF_DATE_KHR || renderResult == VK_SUBOPTIMAL_KHR)
+    {
+        LOG_MESSAGE("SwapChain out of date/suboptimal after vkQueuePresentKHR - rebuilding!");
+        RecreateSwapChain();
+    }
+
+    return renderResult;
 }
 
 Math::Vector2f RenderContext::WindowSize()
