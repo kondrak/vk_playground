@@ -89,7 +89,7 @@ void Application::OnRender()
     if (m_noRedraw)
         return;
 
-    // incompatile swapchain - skip this frame
+    // incompatible swapchain - skip this frame
     if (g_renderContext.RenderStart() == VK_ERROR_OUT_OF_DATE_KHR)
         return;
 
