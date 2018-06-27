@@ -123,22 +123,9 @@ VkResult RenderContext::RenderStart()
     renderBeginInfo.pClearValues = clearColors;
 
     vkCmdBeginRenderPass(m_commandBuffers[m_imageIndex], &renderBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdSetViewport(m_commandBuffers[m_imageIndex], 0, 1, &m_viewport);
+    vkCmdSetScissor(m_commandBuffers[m_imageIndex], 0, 1, &m_scissor);
 
-    VkViewport viewport = {};
-    viewport.x = 0.f;
-    viewport.y = 0.f;
-    viewport.width = (float)swapChain.extent.width;
-    viewport.height = (float)swapChain.extent.height;
-    viewport.minDepth = 0.f;
-    viewport.maxDepth = 1.f;
-
-    VkRect2D scissor = {};
-    scissor.offset.x = 0;
-    scissor.offset.y = 0;
-    scissor.extent = swapChain.extent;
-
-    vkCmdSetViewport(m_commandBuffers[m_imageIndex], 0, 1, &viewport);
-    vkCmdSetScissor(m_commandBuffers[m_imageIndex], 0, 1, &scissor);
     return VK_SUCCESS;
 }
 
@@ -229,6 +216,10 @@ bool RenderContext::RecreateSwapChain()
     swapChain.extent = { (uint32_t)width, (uint32_t)height };
     VK_VERIFY(vk::createSwapChain(device, m_surface, &swapChain, swapChain.sc));
 
+    m_viewport.width = (float)swapChain.extent.width;
+    m_viewport.height = (float)swapChain.extent.height;
+    m_scissor.extent = swapChain.extent;
+
     DestroyDrawBuffers();
     CreateDrawBuffers();
     if (!CreateImageViews()) return false;
@@ -249,6 +240,17 @@ bool RenderContext::InitVulkan()
     // set initial swap chain extent to current window size - in case WM can't determine it by itself
     swapChain.extent = { (uint32_t)width, (uint32_t)height };
     VK_VERIFY(vk::createSwapChain(device, m_surface, &swapChain, VK_NULL_HANDLE));
+
+    m_viewport.x = 0.f;
+    m_viewport.y = 0.f;
+    m_viewport.minDepth = 0.f;
+    m_viewport.maxDepth = 1.f;
+    m_viewport.width = (float)swapChain.extent.width;
+    m_viewport.height = (float)swapChain.extent.height;
+
+    m_scissor.offset.x = 0;
+    m_scissor.offset.y = 0;
+    m_scissor.extent = swapChain.extent;
 
     CreateFences();
     CreateSemaphores();
