@@ -220,6 +220,15 @@ bool RenderContext::RecreateSwapChain()
     m_viewport.height = (float)swapChain.extent.height;
     m_scissor.extent = swapChain.extent;
 
+    // update internal render context dimensions
+    width = swapChain.extent.width;
+    height = swapChain.extent.height;
+    halfWidth = width >> 1;
+    halfHeight = height >> 1;
+    scrRatio = m_viewport.width / m_viewport.height;
+    left = -scrRatio;
+    right = scrRatio;
+
     DestroyDrawBuffers();
     CreateDrawBuffers();
     if (!CreateImageViews()) return false;
