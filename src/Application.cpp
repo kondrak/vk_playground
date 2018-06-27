@@ -33,8 +33,6 @@ void Application::OnWindowMinimized(bool minimized)
 
 void Application::OnStart(int argc, char **argv)
 {
-    m_pipeline.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-
     m_texture = TextureManager::GetInstance()->LoadTexture("res/block_blue.png", g_renderContext.commandPool);
 
     // create a common descriptor set layout and vertex buffer info
