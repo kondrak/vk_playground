@@ -216,7 +216,7 @@ bool RenderContext::RecreateSwapChain()
     swapChain.extent = { (uint32_t)width, (uint32_t)height };
     VK_VERIFY(vk::createSwapChain(device, m_surface, &swapChain, swapChain.sc));
 
-    m_viewport.width = (float)swapChain.extent.width;
+    m_viewport.width  = (float)swapChain.extent.width;
     m_viewport.height = (float)swapChain.extent.height;
     m_scissor.extent = swapChain.extent;
 
