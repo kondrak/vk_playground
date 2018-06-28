@@ -31,7 +31,7 @@ public:
 
         std::stringstream sstream, sstream2, sstream3;
         sstream << m_numFramesToDraw << " FPS";
-        sstream2 << 1000.f / m_numFramesToDraw << " ms";
+        sstream2 << (m_numFramesToDraw > 0 ? (1000.f / m_numFramesToDraw) : 0) << " ms";
         sstream3 << "MSAA:x" << m_numMSAASamples;
 
         m_font->RenderText(sstream.str(), -1.0f, 1.0f );
