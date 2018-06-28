@@ -18,38 +18,21 @@ void Application::OnWindowResize(int newWidth, int newHeight)
 {
     // fast window resizes return incorrect results from polled event - Vulkan surface query does it better
     Math::Vector2f windowSize = g_renderContext.WindowSize();
+    // skip drawing if either dimension is zero
+    m_noRedraw = !(windowSize.m_x > 0 && windowSize.m_y > 0);
 
-    if (windowSize.m_x > 0 && windowSize.m_y > 0)
-    {
-        m_noRedraw = false;
-        g_renderContext.width  = (int)windowSize.m_x;
-        g_renderContext.height = (int)windowSize.m_y;
-        g_renderContext.halfWidth  = g_renderContext.width >> 1;
-        g_renderContext.halfHeight = g_renderContext.height >> 1;
-        g_renderContext.scrRatio = (float)windowSize.m_x / (float)windowSize.m_y;
-        g_renderContext.left  = -g_renderContext.scrRatio;
-        g_renderContext.right =  g_renderContext.scrRatio;
-
+    // window size changed, current swapchain is invalid, so we need to recreate it
+    if (!m_noRedraw)
         g_renderContext.RecreateSwapChain();
-        RebuildPipelines();
-        m_debugOverlay->RebuildPipeline();
-    }
-    else
-        m_noRedraw = true;
 }
 
 void Application::OnWindowMinimized(bool minimized)
 {
     m_noRedraw = minimized;
-    // force swap chain rebuilding when restoring the window
-    if (!minimized)
-        OnWindowResize(g_renderContext.width, g_renderContext.height);
 }
 
 void Application::OnStart(int argc, char **argv)
 {
-    m_pipeline.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-
     m_texture = TextureManager::GetInstance()->LoadTexture("res/block_blue.png", g_renderContext.commandPool);
 
     // create a common descriptor set layout and vertex buffer info
@@ -96,16 +79,9 @@ void Application::OnRender()
     if (m_noRedraw)
         return;
 
-    VkResult renderResult = g_renderContext.RenderStart();
-
-    // incompatile swapchain - recreate it and skip this frame
-    if (renderResult == VK_ERROR_OUT_OF_DATE_KHR)
-    {
-        g_renderContext.RecreateSwapChain();
-        RebuildPipelines();
-        m_debugOverlay->RebuildPipeline();
+    // incompatible swapchain - skip this frame
+    if (g_renderContext.RenderStart() == VK_ERROR_OUT_OF_DATE_KHR)
         return;
-    }
 
     g_cameraDirector.GetActiveCamera()->UpdateView();
 
@@ -119,15 +95,7 @@ void Application::OnRender()
     VK_VERIFY(g_renderContext.Submit());
 
     // present!
-    renderResult = g_renderContext.Present();
-
-    // recreate swapchain if it's out of date
-    if (renderResult == VK_ERROR_OUT_OF_DATE_KHR || renderResult == VK_SUBOPTIMAL_KHR)
-    {
-        g_renderContext.RecreateSwapChain();
-        RebuildPipelines();
-        m_debugOverlay->RebuildPipeline();
-    }
+    g_renderContext.Present();
 }
 
 void Application::OnUpdate(float dt)
@@ -184,8 +152,8 @@ void Application::OnKeyPress(KeyCode key)
     {
         int numSamples = (int)g_renderContext.ToggleMSAA();
         RebuildPipelines();
-        m_debugOverlay->SetMSAASamples(numSamples);
         m_debugOverlay->RebuildPipeline();
+        m_debugOverlay->SetMSAASamples(numSamples);
     }
         break;
     default:
