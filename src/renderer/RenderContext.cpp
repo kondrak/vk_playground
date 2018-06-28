@@ -221,9 +221,9 @@ bool RenderContext::RecreateSwapChain()
     m_scissor.extent = swapChain.extent;
 
     // update internal render context dimensions
-    width = swapChain.extent.width;
+    width  = swapChain.extent.width;
     height = swapChain.extent.height;
-    halfWidth = width >> 1;
+    halfWidth  = width >> 1;
     halfHeight = height >> 1;
     scrRatio = m_viewport.width / m_viewport.height;
     left = -scrRatio;
@@ -254,7 +254,7 @@ bool RenderContext::InitVulkan()
     m_viewport.y = 0.f;
     m_viewport.minDepth = 0.f;
     m_viewport.maxDepth = 1.f;
-    m_viewport.width = (float)swapChain.extent.width;
+    m_viewport.width  = (float)swapChain.extent.width;
     m_viewport.height = (float)swapChain.extent.height;
 
     m_scissor.offset.x = 0;
@@ -356,7 +356,7 @@ bool RenderContext::CreateFramebuffers()
     fbCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     fbCreateInfo.renderPass = renderPass.renderPass;
     fbCreateInfo.attachmentCount = (m_msaaSamples != VK_SAMPLE_COUNT_1_BIT) ? 4 : 2;
-    fbCreateInfo.width = swapChain.extent.width;
+    fbCreateInfo.width  = swapChain.extent.width;
     fbCreateInfo.height = swapChain.extent.height;
     fbCreateInfo.layers = 1;
 
