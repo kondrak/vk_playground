@@ -15,6 +15,10 @@
 struct UniformBufferObject
 {
     Math::Matrix4f ModelViewProjectionMatrix;
+    float worldScaleFactor;
+    int renderLightmaps = 0;
+    int useLightmaps = 1;
+    int useAlphaTest = 0;
 };
 
 // GLSL attribute IDs for both the main and font shaders
@@ -22,6 +26,7 @@ enum Attributes : uint32_t
 {
     inVertex = 0,
     inTexCoord = 1,
+    inTexCoordLightmap = 2,
     inColor = 2,
 };
 
@@ -73,7 +78,7 @@ public:
 
     Math::Matrix4f ModelViewProjectionMatrix; // global MVP used to orient the entire world
 private:
-    bool InitVulkan(); 
+    bool InitVulkan(const char *appTitle); 
     void CreateDrawBuffers();
     void DestroyDrawBuffers();
     void CreateMSAABuffers();
@@ -100,15 +105,17 @@ private:
     // Vulkan image views
     std::vector<VkImageView> m_imageViews;
 
+    // use 2 synchronized command buffers for rendering (double buffering)
+    static const int NUM_CMDBUFFERS = 2;
+
     // command buffers
     std::vector<VkCommandBuffer> m_commandBuffers;
-
     // command buffer double buffering fences
-    std::vector<VkFence> m_fences;
+    VkFence m_fences[NUM_CMDBUFFERS];
     // semaphore: signal when next image is available for rendering
-    VkSemaphore m_imageAvailableSemaphore;
+    VkSemaphore m_imageAvailableSemaphores[NUM_CMDBUFFERS];
     // semaphore: signal when rendering to current command buffer is complete
-    VkSemaphore m_renderFinishedSemaphore;
+    VkSemaphore m_renderFinishedSemaphores[NUM_CMDBUFFERS];
 
     // depth buffer texture
     vk::Texture m_depthBuffer;
