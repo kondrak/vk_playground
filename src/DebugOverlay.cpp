@@ -21,5 +21,7 @@ void DebugOverlay::OnKeyPress( KeyCode key )
     case KEY_F11:
         m_debugFlags ^= DEBUG_SHOW_FPS;
         break;
+    default:
+        break;
     }
 }
