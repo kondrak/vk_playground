@@ -73,7 +73,7 @@ public:
 
     Math::Matrix4f ModelViewProjectionMatrix; // global MVP used to orient the entire world
 private:
-    bool InitVulkan(const char *appTitle); 
+    bool InitVulkan(const char *appTitle);
     void CreateDrawBuffers();
     void DestroyDrawBuffers();
     void CreateMSAABuffers();
