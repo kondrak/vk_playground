@@ -149,7 +149,7 @@ void Application::OnKeyPress(KeyCode key)
     case KEY_ESC:
         Terminate();
         break;
-    case KEY_F10:
+    case KEY_F8:
     {
         int numSamples = (int)g_renderContext.ToggleMSAA();
         RebuildPipelines();
