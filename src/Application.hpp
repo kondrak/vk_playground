@@ -7,6 +7,7 @@
 #include "Math.hpp"
 #include "renderer/RenderContext.hpp"
 #include "renderer/TextureManager.hpp"
+#include "renderer/Ubo.hpp"
 
 /*
  * main application

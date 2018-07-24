@@ -149,5 +149,8 @@
     <ClInclude Include="src\DebugOverlay.hpp">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\renderer\Ubo.hpp">
+      <Filter>Source Files\renderer</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
