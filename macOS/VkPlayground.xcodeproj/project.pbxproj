@@ -99,6 +99,7 @@
 		E20EDB6120FDDE8C00AA234A /* libvulkan.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libvulkan.1.dylib; path = ../../VulkanSDK/1.1.77.0/macOS/lib/libvulkan.1.dylib; sourceTree = "<group>"; };
 		E289307420FDCB6600074D1A /* VkPlayground */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = VkPlayground; sourceTree = BUILT_PRODUCTS_DIR; };
 		E289308220FDD1D200074D1A /* SDL2.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SDL2.framework; path = ../../../../Library/Frameworks/SDL2.framework; sourceTree = "<group>"; };
+		E2B71E9F21086BE60008A53B /* Ubo.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Ubo.hpp; path = ../src/renderer/Ubo.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -150,6 +151,7 @@
 				E20EDB2820FDD69800AA234A /* RenderContext.hpp */,
 				E20EDB2E20FDD69800AA234A /* TextureManager.cpp */,
 				E20EDB2420FDD69800AA234A /* TextureManager.hpp */,
+				E2B71E9F21086BE60008A53B /* Ubo.hpp */,
 			);
 			name = renderer;
 			sourceTree = "<group>";
