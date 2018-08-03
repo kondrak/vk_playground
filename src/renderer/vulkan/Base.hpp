@@ -42,8 +42,10 @@ namespace vk
 
         VkQueue graphicsQueue = VK_NULL_HANDLE;
         VkQueue presentQueue  = VK_NULL_HANDLE;
-        int queueFamilyIndex   = -1; // physical device queue family index
-        int presentFamilyIndex = -1; // physical device presentation family index
+        VkQueue transferQueue = VK_NULL_HANDLE;
+        int queueFamilyIndex    = -1; // physical device queue family index
+        int presentFamilyIndex  = -1; // physical device presentation family index
+        int transferFamilyIndex = -1;
     };
 
     // Vulkan descriptor
