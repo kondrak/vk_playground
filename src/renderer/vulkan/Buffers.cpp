@@ -146,6 +146,6 @@ namespace vk
         copyRegion.size = size;
         vkCmdCopyBuffer(commandBuffer, src, dst, 1, &copyRegion);
 
-        endOneTimeCommand(device, commandBuffer, commandPool, device.graphicsQueue);
+        endOneTimeCommand(device, commandBuffer, commandPool, device.transferQueue);
     }
 }

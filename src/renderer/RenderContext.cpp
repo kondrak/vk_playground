@@ -55,6 +55,7 @@ void RenderContext::Destroy()
         vk::destroyRenderPass(device, renderPass);
         vk::freeCommandBuffers(device, commandPool, m_commandBuffers);
         vkDestroyCommandPool(device.logical, commandPool, nullptr);
+        vkDestroyCommandPool(device.logical, transferCommandPool, nullptr);
  
         DestroyFramebuffers();
         DestroyImageViews();
@@ -269,7 +270,8 @@ bool RenderContext::InitVulkan(const char *appTitle)
     CreatePipelineCache();
 
     VK_VERIFY(vk::createRenderPass(device, swapChain, &renderPass));
-    VK_VERIFY(vk::createCommandPool(device, &commandPool));
+    VK_VERIFY(vk::createCommandPool(device, device.queueFamilyIndex, &commandPool));
+    VK_VERIFY(vk::createCommandPool(device, device.transferFamilyIndex, &transferCommandPool));
     CreateDrawBuffers();
     if (!CreateImageViews()) return false;
     if (!CreateFramebuffers()) return false;

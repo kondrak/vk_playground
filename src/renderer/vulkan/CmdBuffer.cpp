@@ -39,11 +39,11 @@ namespace vk
         vkFreeCommandBuffers(device.logical, commandPool, 1, &commandBuffer);
     }
 
-    VkResult createCommandPool(const Device &device, VkCommandPool *commandPool)
+    VkResult createCommandPool(const Device &device, uint32_t queueFamilyIndex, VkCommandPool *commandPool)
     {
         VkCommandPoolCreateInfo cpCreateInfo = {};
         cpCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        cpCreateInfo.queueFamilyIndex = device.queueFamilyIndex;
+        cpCreateInfo.queueFamilyIndex = queueFamilyIndex;
         // allow the command pool to be explicitly reset without reallocating it manually during recording each frame
         cpCreateInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 

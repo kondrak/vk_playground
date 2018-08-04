@@ -35,7 +35,7 @@ Font::Font(const char *tex) : m_scale(1.f, 1.f), m_position(0.0f, 0.0f, 0.0f), m
     m_vbInfo.attributeDescriptions.push_back(vk::getAttributeDescription(inColor, VK_FORMAT_R32G32B32_SFLOAT, sizeof(float) * 5));
 
     // create vertex buffer and Vulkan descriptor
-    vk::createVertexBuffer(g_renderContext.device, g_renderContext.commandPool, &m_charBuffer, sizeof(Glyph) * MAX_CHARS, &m_vertexBuffer);
+    vk::createVertexBuffer(g_renderContext.device, g_renderContext.transferCommandPool, &m_charBuffer, sizeof(Glyph) * MAX_CHARS, &m_vertexBuffer);
     CreateDescriptor(*m_texture, &m_descriptor);
 
     RebuildPipeline();

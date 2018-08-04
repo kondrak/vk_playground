@@ -56,9 +56,9 @@ void Application::OnStart(int argc, char **argv)
     const uint32_t indices[6] = { 0, 1, 2, 1, 3, 2 };
 
     // vertex buffer and index buffer with staging buffer
-    vk::createVertexBuffer(g_renderContext.device, g_renderContext.commandPool,
+    vk::createVertexBuffer(g_renderContext.device, g_renderContext.transferCommandPool,
                            verts, sizeof(Vertex) * 4, &m_vertexBuffer);
-    vk::createIndexBuffer(g_renderContext.device, g_renderContext.commandPool,
+    vk::createIndexBuffer(g_renderContext.device, g_renderContext.transferCommandPool,
                           indices, sizeof(uint32_t) * 6, &m_indexBuffer);
 
     const vk::Texture *textureSet[1] = { *m_texture };

@@ -37,6 +37,7 @@ public:
     vk::SwapChain swapChain;
     vk::RenderPass renderPass;
     VkCommandPool   commandPool = VK_NULL_HANDLE;
+    VkCommandPool   transferCommandPool = VK_NULL_HANDLE;
     VkCommandBuffer activeCmdBuffer = VK_NULL_HANDLE;
     VkPipelineCache pipelineCache = VK_NULL_HANDLE;
 
