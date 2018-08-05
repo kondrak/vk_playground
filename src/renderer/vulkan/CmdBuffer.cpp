@@ -34,8 +34,17 @@ namespace vk
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &commandBuffer;
 
-        vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
-        vkQueueWaitIdle(queue);
+        VkFenceCreateInfo fCreateInfo = {};
+        fCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+        VkFence queueFence;
+        vkCreateFence(device.logical, &fCreateInfo, nullptr, &queueFence);
+
+        vkQueueSubmit(queue, 1, &submitInfo, queueFence);
+ 
+        vkWaitForFences(device.logical, 1, &queueFence, VK_TRUE, UINT64_MAX);
+        vkDestroyFence(device.logical, queueFence, nullptr);
+
         vkFreeCommandBuffers(device.logical, commandPool, 1, &commandBuffer);
     }
 
