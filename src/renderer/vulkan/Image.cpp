@@ -30,14 +30,14 @@ namespace vk
 
         VK_VERIFY(createImage(device, width, height, dstTex->format, VK_IMAGE_TILING_OPTIMAL, imageUsage, VMA_MEMORY_USAGE_GPU_ONLY, dstTex));
         // copy buffers
-        transitionImageLayout(device, commandPool, device.graphicsQueue, *dstTex, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-        copyBufferToImage(device, commandPool, stagingBuffer.buffer, dstTex->image, width, height);
+        transitionImageLayout(device, commandPool2, device.transferQueue, *dstTex, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        copyBufferToImage(device, commandPool2, stagingBuffer.buffer, dstTex->image, width, height);
 
         if (dstTex->mipLevels > 1)
             generateMipmaps(device, commandPool, *dstTex, width, height);
         else
         {
-            if (device.queueFamilyIndex == device.transferFamilyIndex)
+            if (device.transferQueue == device.graphicsQueue)
             {
                 transitionImageLayout(device, commandPool, device.graphicsQueue, *dstTex, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
             }
@@ -246,7 +246,7 @@ namespace vk
 
         vkCmdCopyBufferToImage(cmdBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-        endOneTimeCommand(device, cmdBuffer, commandPool, device.graphicsQueue);
+        endOneTimeCommand(device, cmdBuffer, commandPool, device.transferQueue);
     }
 
     VkResult createImage(const Device &device, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VmaMemoryUsage memUsage, Texture *texture)
