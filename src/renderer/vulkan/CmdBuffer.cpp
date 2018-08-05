@@ -25,7 +25,7 @@ namespace vk
         return commandBuffer;
     }
 
-    void endOneTimeCommand(const Device &device, const VkCommandBuffer &commandBuffer, const VkCommandPool &commandPool, const VkQueue &graphicsQueue)
+    void endOneTimeCommand(const Device &device, const VkCommandBuffer &commandBuffer, const VkCommandPool &commandPool, const VkQueue &queue)
     {
         vkEndCommandBuffer(commandBuffer);
 
@@ -34,8 +34,8 @@ namespace vk
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &commandBuffer;
 
-        vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-        vkQueueWaitIdle(graphicsQueue);
+        vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
+        vkQueueWaitIdle(queue);
         vkFreeCommandBuffers(device.logical, commandPool, 1, &commandBuffer);
     }
 
