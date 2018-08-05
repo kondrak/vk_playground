@@ -49,7 +49,7 @@ bool GameTexture::Load(const VkCommandPool &commandPool, bool filtering)
     // calculate number of mipmaps to generate for given texture dimensions
     m_vkTexture.mipLevels = (uint32_t)std::floor(std::log2(std::max(m_width, m_height))) + 1;
 
-    vk::createTexture(g_renderContext.device, commandPool, &m_vkTexture, m_textureData, m_width, m_height);
+    vk::createTexture(g_renderContext.device, commandPool, g_renderContext.transferCommandPool, &m_vkTexture, m_textureData, m_width, m_height);
 
     stbi_image_free(m_textureData);
     m_textureData = nullptr;

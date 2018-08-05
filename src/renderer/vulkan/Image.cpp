@@ -6,12 +6,12 @@
 namespace vk
 {
     // internal helpers
-    static void transitionImageLayout(const Device &device, const VkCommandPool &commandPool, const Texture &texture, const VkImageLayout &oldLayout, const VkImageLayout &newLayout);
+    static void transitionImageLayout(const Device &device, const VkCommandPool &commandPool, const VkQueue &queue, const Texture &texture, const VkImageLayout &oldLayout, const VkImageLayout &newLayout);
     static void copyBufferToImage(const Device &device, const VkCommandPool &commandPool, const VkBuffer &buffer, const VkImage &image, uint32_t width, uint32_t height);
     static VkResult createImage(const Device &device, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VmaMemoryUsage memUsage, Texture *texture);
     static void generateMipmaps(const Device &device, const VkCommandPool &commandPool, const Texture &texture, uint32_t width, uint32_t height);
 
-    void createTextureImage(const Device &device, const VkCommandPool &commandPool, Texture *dstTex, const unsigned char *data, uint32_t width, uint32_t height)
+    void createTextureImage(const Device &device, const VkCommandPool &commandPool, const VkCommandPool &commandPool2, Texture *dstTex, const unsigned char *data, uint32_t width, uint32_t height)
     {
         Buffer stagingBuffer;
         uint32_t imageSize = width * height * (dstTex->format == VK_FORMAT_R8G8B8_UNORM ? 3 : 4);
@@ -30,20 +30,30 @@ namespace vk
 
         VK_VERIFY(createImage(device, width, height, dstTex->format, VK_IMAGE_TILING_OPTIMAL, imageUsage, VMA_MEMORY_USAGE_GPU_ONLY, dstTex));
         // copy buffers
-        transitionImageLayout(device, commandPool, *dstTex, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        transitionImageLayout(device, commandPool, device.graphicsQueue, *dstTex, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
         copyBufferToImage(device, commandPool, stagingBuffer.buffer, dstTex->image, width, height);
 
         if (dstTex->mipLevels > 1)
             generateMipmaps(device, commandPool, *dstTex, width, height);
         else
-            transitionImageLayout(device, commandPool, *dstTex, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        {
+            if (device.queueFamilyIndex == device.transferFamilyIndex)
+            {
+                transitionImageLayout(device, commandPool, device.graphicsQueue, *dstTex, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            }
+            else
+            {
+                transitionImageLayout(device, commandPool2, device.transferQueue, *dstTex, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+                transitionImageLayout(device, commandPool, device.graphicsQueue, *dstTex, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            }
+        }
 
         freeBuffer(device, stagingBuffer);
     }
 
-    void createTexture(const Device &device, const VkCommandPool &commandPool, Texture *dstTex, const unsigned char *data, uint32_t width, uint32_t height)
+    void createTexture(const Device &device, const VkCommandPool &commandPool, const VkCommandPool &commandPool2, Texture *dstTex, const unsigned char *data, uint32_t width, uint32_t height)
     {
-        createTextureImage(device, commandPool, dstTex, data, width, height);
+        createTextureImage(device, commandPool, commandPool2, dstTex, data, width, height);
         VK_VERIFY(createImageView(device, dstTex->image, VK_IMAGE_ASPECT_COLOR_BIT, &dstTex->imageView, dstTex->format, dstTex->mipLevels));
         VK_VERIFY(createTextureSampler(device, dstTex));
     }
@@ -111,7 +121,7 @@ namespace vk
         VK_VERIFY(createImage(device, swapChain.extent.width, swapChain.extent.height, colorTexture.format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VMA_MEMORY_USAGE_GPU_ONLY, &colorTexture));
         VK_VERIFY(createImageView(device, colorTexture.image, VK_IMAGE_ASPECT_COLOR_BIT, &colorTexture.imageView, colorTexture.format, colorTexture.mipLevels));
 
-        transitionImageLayout(device, commandPool, colorTexture, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+        transitionImageLayout(device, commandPool, device.graphicsQueue, colorTexture, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
         return colorTexture;
     }
@@ -125,12 +135,12 @@ namespace vk
         VK_VERIFY(createImage(device, swapChain.extent.width, swapChain.extent.height, depthTexture.format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VMA_MEMORY_USAGE_GPU_ONLY, &depthTexture));
         VK_VERIFY(createImageView(device, depthTexture.image, VK_IMAGE_ASPECT_DEPTH_BIT, &depthTexture.imageView, depthTexture.format, depthTexture.mipLevels));
 
-        transitionImageLayout(device, commandPool, depthTexture, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+        transitionImageLayout(device, commandPool, device.graphicsQueue, depthTexture, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
         return depthTexture;
     }
 
-    void transitionImageLayout(const Device &device, const VkCommandPool &commandPool, const Texture &texture, const VkImageLayout &oldLayout, const VkImageLayout &newLayout)
+    void transitionImageLayout(const Device &device, const VkCommandPool &commandPool, const VkQueue &queue, const Texture &texture, const VkImageLayout &oldLayout, const VkImageLayout &newLayout)
     {
         VkCommandBuffer cmdBuffer = beginOneTimeCommand(device, commandPool);
         VkPipelineStageFlags srcStage;
@@ -166,10 +176,34 @@ namespace vk
         }
         else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
         {
-            imgBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            imgBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-            dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            if (device.transferQueue == device.graphicsQueue)
+            {
+                imgBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+                imgBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+                srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+                dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            }
+            else
+            {
+                if (device.transferQueue == queue)
+                {
+                    imgBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+                    imgBarrier.dstAccessMask = 0;
+                    imgBarrier.srcQueueFamilyIndex = device.transferFamilyIndex;
+                    imgBarrier.dstQueueFamilyIndex = device.queueFamilyIndex;
+                    srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+                    dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+                }
+                else
+                {
+                    imgBarrier.srcAccessMask = 0;
+                    imgBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+                    imgBarrier.srcQueueFamilyIndex = device.transferFamilyIndex;
+                    imgBarrier.dstQueueFamilyIndex = device.queueFamilyIndex;
+                    srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+                    dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+                }
+            }
         }
         else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
         {
@@ -192,7 +226,7 @@ namespace vk
 
         vkCmdPipelineBarrier(cmdBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &imgBarrier);
 
-        endOneTimeCommand(device, cmdBuffer, commandPool, device.graphicsQueue);
+        endOneTimeCommand(device, cmdBuffer, commandPool, queue);
     }
 
     void copyBufferToImage(const Device &device, const VkCommandPool &commandPool, const VkBuffer &buffer, const VkImage &image, uint32_t width, uint32_t height)
