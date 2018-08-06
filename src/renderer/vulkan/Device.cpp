@@ -40,7 +40,7 @@ namespace vk
         VK_VERIFY(selectPhysicalDevice(instance, surface, &device));
         VK_VERIFY(createLogicalDevice(&device));
 
-        vkGetDeviceQueue(device.logical, device.queueFamilyIndex, 0, &device.graphicsQueue);
+        vkGetDeviceQueue(device.logical, device.graphicsFamilyIndex, 0, &device.graphicsQueue);
         vkGetDeviceQueue(device.logical, device.presentFamilyIndex, 0, &device.presentQueue);
         vkGetDeviceQueue(device.logical, device.transferFamilyIndex, 0, &device.transferQueue);
 
@@ -75,9 +75,9 @@ namespace vk
         scCreateInfo.queueFamilyIndexCount = 0;
         scCreateInfo.pQueueFamilyIndices = nullptr;
 
-        if (device.presentFamilyIndex != device.queueFamilyIndex)
+        if (device.presentFamilyIndex != device.graphicsFamilyIndex)
         {
-            uint32_t queueFamilyIndices[] = { (uint32_t)device.queueFamilyIndex, (uint32_t)device.presentFamilyIndex };
+            uint32_t queueFamilyIndices[] = { (uint32_t)device.graphicsFamilyIndex, (uint32_t)device.presentFamilyIndex };
             scCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
             scCreateInfo.queueFamilyIndexCount = 2;
             scCreateInfo.pQueueFamilyIndices = queueFamilyIndices;
@@ -136,7 +136,7 @@ namespace vk
         float queuePriority = 1.f;
         VkDeviceQueueCreateInfo queueCreateInfo[3] = { {}, {}, {} };
         queueCreateInfo[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        queueCreateInfo[0].queueFamilyIndex = device->queueFamilyIndex;
+        queueCreateInfo[0].queueFamilyIndex = device->graphicsFamilyIndex;
         queueCreateInfo[0].queueCount = 1;
         queueCreateInfo[0].pQueuePriorities = &queuePriority;
         queueCreateInfo[1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -151,13 +151,13 @@ namespace vk
         deviceFeatures.fillModeNonSolid = VK_TRUE;  // for wireframe rendering
 
         // a graphics and present queue are different - two queues have to be created
-        if (device->queueFamilyIndex != device->presentFamilyIndex)
+        if (device->graphicsFamilyIndex != device->presentFamilyIndex)
         {
             queueCreateInfo[numQueues++].queueFamilyIndex = device->presentFamilyIndex;
         }
 
         // a separate transfer queue exists that's different from present and graphics queue?
-        if (device->transferFamilyIndex != device->queueFamilyIndex && device->transferFamilyIndex != device->presentFamilyIndex)
+        if (device->transferFamilyIndex != device->graphicsFamilyIndex && device->transferFamilyIndex != device->presentFamilyIndex)
         {
             queueCreateInfo[numQueues++].queueFamilyIndex = device->transferFamilyIndex;
         }
@@ -228,7 +228,7 @@ namespace vk
 
                     if (queueFamilies[j].queueCount > 0 && queueFamilies[j].queueFlags & VK_QUEUE_GRAPHICS_BIT)
                     {
-                        device->queueFamilyIndex = j;
+                        device->graphicsFamilyIndex = j;
                     }
 
                     if (queueFamilies[j].queueCount > 0 && !(queueFamilies[j].queueFlags & VK_QUEUE_GRAPHICS_BIT) && (queueFamilies[j].queueFlags & VK_QUEUE_TRANSFER_BIT))
@@ -240,11 +240,11 @@ namespace vk
                 delete[] queueFamilies;
 
                 // accept only device that has support for presentation and drawing
-                if (device->presentFamilyIndex >= 0 && device->queueFamilyIndex >= 0)
+                if (device->presentFamilyIndex >= 0 && device->graphicsFamilyIndex >= 0)
                 {
                     if (device->transferFamilyIndex < 0)
                     {
-                        device->transferFamilyIndex = device->queueFamilyIndex;
+                        device->transferFamilyIndex = device->graphicsFamilyIndex;
                     }
 
                     device->physical = devices[i];

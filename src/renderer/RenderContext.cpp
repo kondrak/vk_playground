@@ -270,7 +270,7 @@ bool RenderContext::InitVulkan(const char *appTitle)
     CreatePipelineCache();
 
     VK_VERIFY(vk::createRenderPass(device, swapChain, &renderPass));
-    VK_VERIFY(vk::createCommandPool(device, device.queueFamilyIndex, &device.commandPool));
+    VK_VERIFY(vk::createCommandPool(device, device.graphicsFamilyIndex, &device.commandPool));
     VK_VERIFY(vk::createCommandPool(device, device.transferFamilyIndex, &device.transferCommandPool));
     CreateDrawBuffers();
     if (!CreateImageViews()) return false;

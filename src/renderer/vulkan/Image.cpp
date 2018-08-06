@@ -190,7 +190,7 @@ namespace vk
                     imgBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
                     imgBarrier.dstAccessMask = 0;
                     imgBarrier.srcQueueFamilyIndex = device.transferFamilyIndex;
-                    imgBarrier.dstQueueFamilyIndex = device.queueFamilyIndex;
+                    imgBarrier.dstQueueFamilyIndex = device.graphicsFamilyIndex;
                     srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
                     dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
                 }
@@ -199,7 +199,7 @@ namespace vk
                     imgBarrier.srcAccessMask = 0;
                     imgBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
                     imgBarrier.srcQueueFamilyIndex = device.transferFamilyIndex;
-                    imgBarrier.dstQueueFamilyIndex = device.queueFamilyIndex;
+                    imgBarrier.dstQueueFamilyIndex = device.graphicsFamilyIndex;
                     srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
                     dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
                 }
