@@ -53,9 +53,9 @@ void RenderContext::Destroy()
         vkDeviceWaitIdle(device.logical);
 
         vk::destroyRenderPass(device, renderPass);
-        vk::freeCommandBuffers(device, commandPool, m_commandBuffers);
-        vkDestroyCommandPool(device.logical, commandPool, nullptr);
-        vkDestroyCommandPool(device.logical, transferCommandPool, nullptr);
+        vk::freeCommandBuffers(device, device.commandPool, m_commandBuffers);
+        vkDestroyCommandPool(device.logical, device.commandPool, nullptr);
+        vkDestroyCommandPool(device.logical, device.transferCommandPool, nullptr);
  
         DestroyFramebuffers();
         DestroyImageViews();
@@ -270,14 +270,14 @@ bool RenderContext::InitVulkan(const char *appTitle)
     CreatePipelineCache();
 
     VK_VERIFY(vk::createRenderPass(device, swapChain, &renderPass));
-    VK_VERIFY(vk::createCommandPool(device, device.queueFamilyIndex, &commandPool));
-    VK_VERIFY(vk::createCommandPool(device, device.transferFamilyIndex, &transferCommandPool));
+    VK_VERIFY(vk::createCommandPool(device, device.queueFamilyIndex, &device.commandPool));
+    VK_VERIFY(vk::createCommandPool(device, device.transferFamilyIndex, &device.transferCommandPool));
     CreateDrawBuffers();
     if (!CreateImageViews()) return false;
     if (!CreateFramebuffers()) return false;
 
     // allocate NUM_CMDBUFFERS command buffers (used to be m_frameBuffers.size())
-    VK_VERIFY(vk::createCommandBuffers(device, commandPool, m_commandBuffers, NUM_CMDBUFFERS));
+    VK_VERIFY(vk::createCommandBuffers(device, device.commandPool, m_commandBuffers, NUM_CMDBUFFERS));
 
     return true;
 }
@@ -289,7 +289,7 @@ void RenderContext::CreateDrawBuffers()
 
     for (size_t i = 0; i < swapChain.images.size(); ++i)
     {
-        m_depthBuffer[i] = vk::createDepthBuffer(device, swapChain, commandPool, m_msaaSamples);
+        m_depthBuffer[i] = vk::createDepthBuffer(device, swapChain, device.commandPool, m_msaaSamples);
     }
 
     // additional render targets for MSAA (if enabled)
@@ -321,7 +321,7 @@ void RenderContext::CreateMSAABuffers()
 {
     for (size_t i = 0; i < swapChain.images.size(); ++i)
     {
-        m_msaaColor[i] = vk::createColorBuffer(device, swapChain, commandPool, m_msaaSamples);
+        m_msaaColor[i] = vk::createColorBuffer(device, swapChain, device.commandPool, m_msaaSamples);
     }
 }
 

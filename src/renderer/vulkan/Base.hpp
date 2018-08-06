@@ -40,6 +40,8 @@ namespace vk
         VmaAllocator     allocator = VK_NULL_HANDLE;
         VkPhysicalDeviceProperties properties = {};
 
+        VkCommandPool commandPool = VK_NULL_HANDLE;
+        VkCommandPool transferCommandPool = VK_NULL_HANDLE;
         VkQueue graphicsQueue = VK_NULL_HANDLE;
         VkQueue presentQueue  = VK_NULL_HANDLE;
         VkQueue transferQueue = VK_NULL_HANDLE;

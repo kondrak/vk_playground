@@ -11,7 +11,7 @@ namespace vk
     static VkResult createImage(const Device &device, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VmaMemoryUsage memUsage, Texture *texture);
     static void generateMipmaps(const Device &device, const VkCommandPool &commandPool, const Texture &texture, uint32_t width, uint32_t height);
 
-    void createTextureImage(const Device &device, const VkCommandPool &commandPool, const VkCommandPool &commandPool2, Texture *dstTex, const unsigned char *data, uint32_t width, uint32_t height)
+    void createTextureImage(const Device &device, Texture *dstTex, const unsigned char *data, uint32_t width, uint32_t height)
     {
         Buffer stagingBuffer;
         uint32_t imageSize = width * height * (dstTex->format == VK_FORMAT_R8G8B8_UNORM ? 3 : 4);
@@ -30,30 +30,30 @@ namespace vk
 
         VK_VERIFY(createImage(device, width, height, dstTex->format, VK_IMAGE_TILING_OPTIMAL, imageUsage, VMA_MEMORY_USAGE_GPU_ONLY, dstTex));
         // copy buffers
-        transitionImageLayout(device, commandPool2, device.transferQueue, *dstTex, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-        copyBufferToImage(device, commandPool2, stagingBuffer.buffer, dstTex->image, width, height);
+        transitionImageLayout(device, device.transferCommandPool, device.transferQueue, *dstTex, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        copyBufferToImage(device, device.transferCommandPool, stagingBuffer.buffer, dstTex->image, width, height);
 
         if (dstTex->mipLevels > 1)
-            generateMipmaps(device, commandPool, *dstTex, width, height);
+            generateMipmaps(device, device.commandPool, *dstTex, width, height);
         else
         {
             if (device.transferQueue == device.graphicsQueue)
             {
-                transitionImageLayout(device, commandPool, device.graphicsQueue, *dstTex, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+                transitionImageLayout(device, device.commandPool, device.graphicsQueue, *dstTex, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
             }
             else
             {
-                transitionImageLayout(device, commandPool2, device.transferQueue, *dstTex, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-                transitionImageLayout(device, commandPool, device.graphicsQueue, *dstTex, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+                transitionImageLayout(device, device.transferCommandPool, device.transferQueue, *dstTex, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+                transitionImageLayout(device, device.commandPool, device.graphicsQueue, *dstTex, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
             }
         }
 
         freeBuffer(device, stagingBuffer);
     }
 
-    void createTexture(const Device &device, const VkCommandPool &commandPool, const VkCommandPool &commandPool2, Texture *dstTex, const unsigned char *data, uint32_t width, uint32_t height)
+    void createTexture(const Device &device, Texture *dstTex, const unsigned char *data, uint32_t width, uint32_t height)
     {
-        createTextureImage(device, commandPool, commandPool2, dstTex, data, width, height);
+        createTextureImage(device, dstTex, data, width, height);
         VK_VERIFY(createImageView(device, dstTex->image, VK_IMAGE_ASPECT_COLOR_BIT, &dstTex->imageView, dstTex->format, dstTex->mipLevels));
         VK_VERIFY(createTextureSampler(device, dstTex));
     }
