@@ -14,7 +14,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityF
                                                     const VkDebugUtilsMessengerCallbackDataEXT *callbackData,
                                                     void* userData)
 {
-    auto typeToStr = [](VkDebugUtilsMessageTypeFlagsEXT &type) {
+    auto typeToStr = [](VkDebugUtilsMessageTypeFlagsEXT &type) -> const char* {
         bool g = (type & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) != 0;
         bool p = (type & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) != 0;
         bool v = (type & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) != 0;
