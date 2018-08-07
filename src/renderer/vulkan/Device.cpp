@@ -51,12 +51,11 @@ namespace vk
     {
         SwapChainInfo scInfo = {};
         VkSurfaceFormatKHR surfaceFormat = {};
-        VkPresentModeKHR presentMode = {};
         VkExtent2D extent = {};
         VkExtent2D currentSize = swapChain->extent;
         getSwapChainInfo(device.physical, surface, &scInfo);
         getSwapSurfaceFormat(scInfo, &surfaceFormat);
-        getSwapPresentMode(scInfo, &presentMode);
+        getSwapPresentMode(scInfo, &swapChain->presentMode);
         getSwapExtent(scInfo, &extent, currentSize);
 
         // add 1 if going for triple buffering
@@ -85,7 +84,7 @@ namespace vk
 
         scCreateInfo.preTransform = scInfo.surfaceCaps.currentTransform;
         scCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-        scCreateInfo.presentMode = presentMode;
+        scCreateInfo.presentMode = swapChain->presentMode;
         scCreateInfo.clipped = VK_TRUE;
         scCreateInfo.oldSwapchain = oldSwapchain;
 
@@ -320,19 +319,44 @@ namespace vk
 
     void getSwapPresentMode(const SwapChainInfo &scInfo, VkPresentModeKHR *presentMode)
     {
-        *presentMode = VK_PRESENT_MODE_FIFO_KHR;
-        for (uint32_t i = 0; i < scInfo.presentModesCount; ++i)
+        // check if the desired present mode is supported
+        if (*presentMode != VK_PRESENT_MODE_MAX_ENUM_KHR)
         {
-            // always prefer mailbox for triple buffering
-            if (scInfo.presentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR)
+            for (uint32_t i = 0; i < scInfo.presentModesCount; ++i)
             {
-                *presentMode = scInfo.presentModes[i];
-                break;
+                // mode supported, nothing to do here
+                if (scInfo.presentModes[i] == *presentMode)
+                {
+                    LOG_MESSAGE("Preferred present mode found: " << *presentMode);
+                    return;
+                }
             }
-            else if (scInfo.presentModes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR)
+
+            LOG_MESSAGE("Preferred present mode " << *presentMode << " not supported!");
+            // preferred mode not supported - mark and find the next best thing
+            *presentMode = VK_PRESENT_MODE_MAX_ENUM_KHR;
+        }
+
+        // no preferred present mode/preferred not found - choose the next best thing
+        if (*presentMode == VK_PRESENT_MODE_MAX_ENUM_KHR)
+        {
+            *presentMode = VK_PRESENT_MODE_FIFO_KHR;
+
+            for (uint32_t i = 0; i < scInfo.presentModesCount; ++i)
             {
-                *presentMode = scInfo.presentModes[i];
+                // always prefer mailbox for triple buffering
+                if (scInfo.presentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR)
+                {
+                    *presentMode = scInfo.presentModes[i];
+                    break;
+                }
+                else if (scInfo.presentModes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR)
+                {
+                    *presentMode = scInfo.presentModes[i];
+                }
             }
+
+            LOG_MESSAGE("Using present mode: " << *presentMode);
         }
     }
 

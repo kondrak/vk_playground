@@ -218,6 +218,7 @@ bool RenderContext::RecreateSwapChain()
 
     // set initial swap chain extent to current window size - in case WM can't determine it by itself
     swapChain.extent = { (uint32_t)width, (uint32_t)height };
+
     VK_VERIFY(vk::createSwapChain(device, m_surface, &swapChain, swapChain.sc));
 
     m_viewport.width  = (float)swapChain.extent.width;
@@ -252,6 +253,9 @@ bool RenderContext::InitVulkan(const char *appTitle)
     VK_VERIFY(vk::createAllocator(device, &device.allocator));
     // set initial swap chain extent to current window size - in case WM can't determine it by itself
     swapChain.extent = { (uint32_t)width, (uint32_t)height };
+    // desired present mode
+    swapChain.presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+
     VK_VERIFY(vk::createSwapChain(device, m_surface, &swapChain, VK_NULL_HANDLE));
 
     m_viewport.x = 0.f;
