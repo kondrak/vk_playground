@@ -22,13 +22,10 @@ struct SDL_Window;
 
 // verify if VkResult is VK_SUCCESS
 #include "Utils.hpp"
-#define VK_VERIFY(r) \
-    if((r) != VK_SUCCESS) { \
-        std::stringstream msgStr; \
-        msgStr << "Invalid VkResult: " << r << " in " << __FILE__ << ":" << __LINE__ << "\n"; \
-        LogError(msgStr.str().c_str()); \
-        Break(); \
-    }
+#define VK_VERIFY(x) { \
+    VkResult res = (x); \
+    LOG_MESSAGE_ASSERT(res == VK_SUCCESS, "Invalid VkResult: " << res << " in " << __FILE__ << ":" << __LINE__ << "\n"); \
+}
 
 namespace vk
 {
