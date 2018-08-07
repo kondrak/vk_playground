@@ -218,7 +218,6 @@ bool RenderContext::RecreateSwapChain()
 
     // set initial swap chain extent to current window size - in case WM can't determine it by itself
     swapChain.extent = { (uint32_t)width, (uint32_t)height };
-
     VK_VERIFY(vk::createSwapChain(device, m_surface, &swapChain, swapChain.sc));
 
     m_viewport.width  = (float)swapChain.extent.width;
