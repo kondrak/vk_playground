@@ -138,7 +138,8 @@ namespace vk
     // internal helper
     void copyBuffer(const Device &device, const VkBuffer &src, VkBuffer &dst, VkDeviceSize size)
     {
-        VkCommandBuffer commandBuffer = beginOneTimeCommand(device, device.transferCommandPool);
+        VkCommandBuffer commandBuffer = createCommandBuffer(device, device.transferCommandPool);
+        beginCommand(commandBuffer);
 
         VkBufferCopy copyRegion = {};
         copyRegion.srcOffset = 0;
@@ -146,6 +147,7 @@ namespace vk
         copyRegion.size = size;
         vkCmdCopyBuffer(commandBuffer, src, dst, 1, &copyRegion);
 
-        endOneTimeCommand(device, commandBuffer, device.transferCommandPool, device.transferQueue);
+        submitCommand(device, commandBuffer, device.transferQueue);
+        vkFreeCommandBuffers(device.logical, device.transferCommandPool, 1, &commandBuffer);
     }
 }

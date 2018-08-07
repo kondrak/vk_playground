@@ -289,7 +289,7 @@ void RenderContext::CreateDrawBuffers()
 
     for (size_t i = 0; i < swapChain.images.size(); ++i)
     {
-        m_depthBuffer[i] = vk::createDepthBuffer(device, swapChain, device.commandPool, m_msaaSamples);
+        m_depthBuffer[i] = vk::createDepthBuffer(device, swapChain, m_msaaSamples);
     }
 
     // additional render targets for MSAA (if enabled)
@@ -321,7 +321,7 @@ void RenderContext::CreateMSAABuffers()
 {
     for (size_t i = 0; i < swapChain.images.size(); ++i)
     {
-        m_msaaColor[i] = vk::createColorBuffer(device, swapChain, device.commandPool, m_msaaSamples);
+        m_msaaColor[i] = vk::createColorBuffer(device, swapChain, m_msaaSamples);
     }
 }
 
