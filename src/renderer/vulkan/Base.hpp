@@ -14,7 +14,7 @@ struct SDL_Window;
 #include "renderer/vulkan/vk_mem_alloc.h"
 
 // fetch and call Vulkan extension function
-#define callVkF(func, inst, ...) ((PFN_##func)vkGetInstanceProcAddr(inst, #func))(instance, __VA_ARGS__)
+#define callVkF(func, inst, ...) ((PFN_##func)vkGetInstanceProcAddr(inst, #func))(inst, __VA_ARGS__)
 
 // verify if VkResult is VK_SUCCESS
 #include "Utils.hpp"
