@@ -14,11 +14,7 @@ struct SDL_Window;
 #include "renderer/vulkan/vk_mem_alloc.h"
 
 // fetch and call Vulkan extension function
-#define callVkF(func, inst, ...) { PFN_##func fptr = (PFN_##func)vkGetInstanceProcAddr(inst, #func); \
-                                   LOG_MESSAGE_ASSERT(inst, "Invalid Vulkan instance!"); \
-                                   LOG_MESSAGE_ASSERT(fptr, "Function does not exist: " #func); \
-                                   (void)fptr(instance, __VA_ARGS__); \
-}
+#define callVkF(func, inst, ...) ((PFN_##func)vkGetInstanceProcAddr(inst, #func))(instance, __VA_ARGS__)
 
 // verify if VkResult is VK_SUCCESS
 #include "Utils.hpp"

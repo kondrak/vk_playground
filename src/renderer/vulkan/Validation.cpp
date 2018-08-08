@@ -97,7 +97,7 @@ namespace vk
                                        VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
             callbackInfo.pfnUserCallback = debugCallbackUtils;
 
-            vkCreateDebugUtilsMessengerEXT(instance, &callbackInfo, nullptr, &validationMessenger);
+            VK_VERIFY(vkCreateDebugUtilsMessengerEXT(instance, &callbackInfo, nullptr, &validationMessenger));
         }
         else
         {
@@ -107,7 +107,7 @@ namespace vk
                                  VK_DEBUG_REPORT_INFORMATION_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
             callbackInfo.pfnCallback = debugCallbackReport;
 
-            vkCreateDebugReportCallbackEXT(instance, &callbackInfo, nullptr, &validationLayerCallback);
+            VK_VERIFY(vkCreateDebugReportCallbackEXT(instance, &callbackInfo, nullptr, &validationLayerCallback));
         }
     }
 
