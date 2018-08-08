@@ -58,8 +58,11 @@ namespace vk
         getSwapPresentMode(scInfo, &swapChain->presentMode);
         getSwapExtent(scInfo, &extent, currentSize);
 
-        // add 1 if going for triple buffering
         uint32_t imageCount = scInfo.surfaceCaps.minImageCount;
+
+        // request additional image for triple buffering if using MAILBOX
+        if (swapChain->presentMode == VK_PRESENT_MODE_MAILBOX_KHR)
+            imageCount++;
 
         VkSwapchainCreateInfoKHR scCreateInfo = {};
         scCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
