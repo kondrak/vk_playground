@@ -9,11 +9,10 @@ namespace vk
     static bool instanceExtensionSupported(const char *extension)
     {
         uint32_t extensionCount = 0;
-        std::vector<VkExtensionProperties> instanceExtensions;
-
         vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-        LOG_MESSAGE_ASSERT(instanceExtensions.empty(), "No instance extensions available?");
-        instanceExtensions.resize(extensionCount);
+        LOG_MESSAGE_ASSERT(extensionCount > 0, "No instance extensions available?");
+
+        std::vector<VkExtensionProperties> instanceExtensions(extensionCount);
         vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, instanceExtensions.data());
 
         for (auto &e : instanceExtensions)
@@ -36,11 +35,10 @@ namespace vk
         appInfo.apiVersion = VK_API_VERSION_1_1;
 
         unsigned int extCount = 0;
-        std::vector<const char*> enabledExtensions;
-
         // get count of required extensions
         SDL_Vulkan_GetInstanceExtensions(window, &extCount, nullptr);
-        enabledExtensions.resize(extCount);
+
+        std::vector<const char*> enabledExtensions(extCount);
         // get names of required extensions
         SDL_Vulkan_GetInstanceExtensions(window, &extCount, enabledExtensions.data());
 
