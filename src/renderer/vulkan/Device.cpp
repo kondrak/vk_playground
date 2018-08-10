@@ -148,10 +148,10 @@ namespace vk
         queueCreateInfo[2].queueCount = 1;
         queueCreateInfo[2].pQueuePriorities = &queuePriority;
 
-        VkPhysicalDeviceFeatures deviceFeatures = {};
-        deviceFeatures.samplerAnisotropy = VK_TRUE;
-        deviceFeatures.fillModeNonSolid = VK_TRUE;  // for wireframe rendering
-        deviceFeatures.sampleRateShading = VK_TRUE; // for sample shading
+        VkPhysicalDeviceFeatures wantedDeviceFeatures = {};
+        wantedDeviceFeatures.samplerAnisotropy = device->features.samplerAnisotropy;
+        wantedDeviceFeatures.fillModeNonSolid  = device->features.fillModeNonSolid;  // for wireframe rendering
+        wantedDeviceFeatures.sampleRateShading = device->features.sampleRateShading; // for sample shading
 
         // a graphics and present queue are different - two queues have to be created
         if (device->graphicsFamilyIndex != device->presentFamilyIndex)
@@ -167,7 +167,7 @@ namespace vk
 
         VkDeviceCreateInfo deviceCreateInfo = {};
         deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-        deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
+        deviceCreateInfo.pEnabledFeatures = &wantedDeviceFeatures;
         deviceCreateInfo.ppEnabledExtensionNames = devExtensions.data();
         deviceCreateInfo.enabledExtensionCount = (uint32_t)devExtensions.size();
         deviceCreateInfo.queueCreateInfoCount = numQueues;
@@ -252,6 +252,7 @@ namespace vk
 
                     device->physical = devices[i];
                     device->properties = deviceProperties;
+                    device->features = deviceFeatures;
                     return;
                 }
             }

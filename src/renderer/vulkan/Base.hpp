@@ -32,6 +32,7 @@ namespace vk
         VkDevice         logical   = VK_NULL_HANDLE;
         VmaAllocator     allocator = VK_NULL_HANDLE;
         VkPhysicalDeviceProperties properties = {};
+        VkPhysicalDeviceFeatures   features = {};
 
         VkCommandPool commandPool = VK_NULL_HANDLE;
         VkCommandPool transferCommandPool = VK_NULL_HANDLE;
