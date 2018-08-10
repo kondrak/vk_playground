@@ -20,10 +20,6 @@ void Application::OnWindowResize(int newWidth, int newHeight)
     Math::Vector2f windowSize = g_renderContext.WindowSize();
     // skip drawing if either dimension is zero
     m_noRedraw = !(windowSize.m_x > 0 && windowSize.m_y > 0);
-
-    // window size changed, current swapchain is invalid, so we need to recreate it
-    if (!m_noRedraw)
-        g_renderContext.RecreateSwapChain();
 }
 
 void Application::OnWindowMinimized(bool minimized)
@@ -34,7 +30,7 @@ void Application::OnWindowMinimized(bool minimized)
 void Application::OnStart(int argc, char **argv)
 {
     m_pipeline.cache = g_renderContext.pipelineCache;
-    m_texture = TextureManager::GetInstance()->LoadTexture("res/block_blue.png", g_renderContext.commandPool);
+    m_texture = TextureManager::GetInstance()->LoadTexture("res/block_blue.png");
 
     // create a common descriptor set layout and vertex buffer info
     m_vbInfo.bindingDescriptions.push_back(vk::getBindingDescription(sizeof(Vertex)));
@@ -56,10 +52,8 @@ void Application::OnStart(int argc, char **argv)
     const uint32_t indices[6] = { 0, 1, 2, 1, 3, 2 };
 
     // vertex buffer and index buffer with staging buffer
-    vk::createVertexBuffer(g_renderContext.device, g_renderContext.commandPool,
-                           verts, sizeof(Vertex) * 4, &m_vertexBuffer);
-    vk::createIndexBuffer(g_renderContext.device, g_renderContext.commandPool,
-                          indices, sizeof(uint32_t) * 6, &m_indexBuffer);
+    vk::createVertexBuffer(g_renderContext.device, verts, sizeof(Vertex) * 4, &m_vertexBuffer);
+    vk::createIndexBuffer(g_renderContext.device, indices, sizeof(uint32_t) * 6, &m_indexBuffer);
 
     const vk::Texture *textureSet[1] = { *m_texture };
     CreateDescriptor(textureSet, &m_descriptor);
