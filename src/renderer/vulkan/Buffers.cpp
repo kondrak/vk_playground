@@ -55,7 +55,7 @@ namespace vk
         stagingOpts.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
         stagingOpts.memFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
         stagingOpts.vmaFlags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-        stagingOpts.vmaUsage = VMA_MEMORY_USAGE_CPU_ONLY;
+        stagingOpts.vmaUsage = VMA_MEMORY_USAGE_CPU_TO_GPU;
         return createBuffer(device, size, dstBuffer, stagingOpts);
     }
 
