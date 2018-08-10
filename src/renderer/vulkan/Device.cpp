@@ -151,6 +151,7 @@ namespace vk
         VkPhysicalDeviceFeatures deviceFeatures = {};
         deviceFeatures.samplerAnisotropy = VK_TRUE;
         deviceFeatures.fillModeNonSolid = VK_TRUE;  // for wireframe rendering
+        deviceFeatures.sampleRateShading = VK_TRUE; // for sample shading
 
         // a graphics and present queue are different - two queues have to be created
         if (device->graphicsFamilyIndex != device->presentFamilyIndex)
