@@ -127,13 +127,13 @@ void processEvents()
         {
         case SDL_KEYDOWN:
             // alt + f4 handling
-            if (event.key.keysym.sym == SDLK_F4 && (event.key.keysym.mod == KMOD_LALT || event.key.keysym.mod == KMOD_RALT))
+            if (event.key.keysym.sym == SDLK_F4 && (event.key.keysym.mod & KMOD_ALT))
             {
                 g_application.Terminate();
                 break;
             }
             // toggle fullscreen
-            if (event.key.keysym.sym == SDLK_RETURN && (event.key.keysym.mod == KMOD_LALT || event.key.keysym.mod == KMOD_RALT))
+            if (event.key.keysym.sym == SDLK_RETURN && (event.key.keysym.mod & KMOD_ALT))
             {
                 bool isFullScreen = (SDL_GetWindowFlags(g_renderContext.window) & SDL_WINDOW_FULLSCREEN_DESKTOP) != 0;
                 SDL_SetWindowFullscreen(g_renderContext.window, isFullScreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP);
