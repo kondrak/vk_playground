@@ -141,7 +141,7 @@ void processEvents()
                 SDL_GetCurrentDisplayMode(0, &dMode);
                 g_renderContext.width  = dMode.w;
                 g_renderContext.height = dMode.h;
-                g_renderContext.RecreateSwapChain();
+                g_application.OnWindowResize(dMode.w, dMode.h);
                 break;
             }
             g_application.OnKeyPress(SDLKeyToKeyCode(event.key.keysym.sym));
