@@ -3,4 +3,5 @@ contrib/* linguist-vendored
 *.bsp binary
 *.exe binary
 *.dll binary
+*.lib binary
 *.png binary
