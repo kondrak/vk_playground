@@ -135,8 +135,8 @@ void processEvents()
             // toggle fullscreen
             if (event.key.keysym.sym == SDLK_RETURN && (event.key.keysym.mod == KMOD_LALT || event.key.keysym.mod == KMOD_RALT))
             {
-                bool isFullScreen = (SDL_GetWindowFlags(g_renderContext.window) & SDL_WINDOW_FULLSCREEN) != 0;
-                SDL_SetWindowFullscreen(g_renderContext.window, isFullScreen ? 0 : SDL_WINDOW_FULLSCREEN);
+                bool isFullScreen = (SDL_GetWindowFlags(g_renderContext.window) & SDL_WINDOW_FULLSCREEN_DESKTOP) != 0;
+                SDL_SetWindowFullscreen(g_renderContext.window, isFullScreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP);
                 break;
             }
             g_application.OnKeyPress(SDLKeyToKeyCode(event.key.keysym.sym));
