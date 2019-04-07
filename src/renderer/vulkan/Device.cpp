@@ -33,6 +33,7 @@ namespace vk
     static void getSwapSurfaceFormat(const SwapChainInfo &scInfo, VkSurfaceFormatKHR *surfaceFormat);
     static void getSwapPresentMode(const SwapChainInfo &scInfo, VkPresentModeKHR *presentMode);
     static void getSwapExtent(const SwapChainInfo &scInfo, VkExtent2D *swapExtent, const VkExtent2D &currentSize);
+    static VkCompositeAlphaFlagBitsKHR getSupportedCompositeAlpha(VkCompositeAlphaFlagsKHR supportedFlags);
 
     Device createDevice(const VkInstance &instance, const VkSurfaceKHR &surface)
     {
@@ -58,11 +59,15 @@ namespace vk
         getSwapPresentMode(scInfo, &swapChain->presentMode);
         getSwapExtent(scInfo, &extent, currentSize);
 
-        uint32_t imageCount = scInfo.surfaceCaps.minImageCount;
+        // request at least 2 images
+        uint32_t imageCount = std::max(2, (int)scInfo.surfaceCaps.minImageCount);
 
         // request additional image for triple buffering if using MAILBOX
         if (swapChain->presentMode == VK_PRESENT_MODE_MAILBOX_KHR)
-            imageCount++;
+            imageCount = std::max(3, (int)scInfo.surfaceCaps.minImageCount);
+
+        if (scInfo.surfaceCaps.maxImageCount > 0)
+            imageCount = std::min(imageCount, scInfo.surfaceCaps.maxImageCount);
 
         VkSwapchainCreateInfoKHR scCreateInfo = {};
         scCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -77,16 +82,17 @@ namespace vk
         scCreateInfo.queueFamilyIndexCount = 0;
         scCreateInfo.pQueueFamilyIndices = nullptr;
 
+        uint32_t queueFamilyIndices[] = { (uint32_t)device.graphicsFamilyIndex, (uint32_t)device.presentFamilyIndex };
         if (device.presentFamilyIndex != device.graphicsFamilyIndex)
         {
-            uint32_t queueFamilyIndices[] = { (uint32_t)device.graphicsFamilyIndex, (uint32_t)device.presentFamilyIndex };
             scCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
             scCreateInfo.queueFamilyIndexCount = 2;
             scCreateInfo.pQueueFamilyIndices = queueFamilyIndices;
         }
 
-        scCreateInfo.preTransform = scInfo.surfaceCaps.currentTransform;
-        scCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+        // prefer a surface with no transformation - this is especially relevant on Android (prevents image being rendered in wrong orientation)
+        scCreateInfo.preTransform = scInfo.surfaceCaps.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : scInfo.surfaceCaps.currentTransform;
+        scCreateInfo.compositeAlpha = getSupportedCompositeAlpha(scInfo.surfaceCaps.supportedCompositeAlpha);
         scCreateInfo.presentMode = swapChain->presentMode;
         scCreateInfo.clipped = VK_TRUE;
         scCreateInfo.oldSwapchain = oldSwapchain;
@@ -174,7 +180,7 @@ namespace vk
         deviceCreateInfo.pQueueCreateInfos = queueCreateInfo;
 
 #ifdef VALIDATION_LAYERS_ON
-        deviceCreateInfo.enabledLayerCount = 1;
+        deviceCreateInfo.enabledLayerCount = vk::validationLayerCount;
         deviceCreateInfo.ppEnabledLayerNames = vk::validationLayers;
 #else
         deviceCreateInfo.enabledLayerCount = 0;
@@ -224,17 +230,17 @@ namespace vk
                     VK_VERIFY(vkGetPhysicalDeviceSurfaceSupportKHR(devices[i], j, surface, &presentSupported));
 
                     // good optimization would be to find a queue where presentIdx == queueIdx for less overhead
-                    if (queueFamilies[j].queueCount > 0 && presentSupported)
+                    if (device->presentFamilyIndex < 0 && queueFamilies[j].queueCount > 0 && presentSupported)
                     {
                         device->presentFamilyIndex = j;
                     }
 
-                    if (queueFamilies[j].queueCount > 0 && queueFamilies[j].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+                    if (device->graphicsFamilyIndex < 0 && queueFamilies[j].queueCount > 0 && queueFamilies[j].queueFlags & VK_QUEUE_GRAPHICS_BIT)
                     {
                         device->graphicsFamilyIndex = j;
                     }
 
-                    if (queueFamilies[j].queueCount > 0 && !(queueFamilies[j].queueFlags & VK_QUEUE_GRAPHICS_BIT) && (queueFamilies[j].queueFlags & VK_QUEUE_TRANSFER_BIT))
+                    if (device->transferFamilyIndex < 0 && queueFamilies[j].queueCount > 0 && !(queueFamilies[j].queueFlags & VK_QUEUE_GRAPHICS_BIT) && (queueFamilies[j].queueFlags & VK_QUEUE_TRANSFER_BIT))
                     {
                         device->transferFamilyIndex = j;
                     }
@@ -279,8 +285,13 @@ namespace vk
 
                 // all requested extensions must be available
                 if (!available)
+                {
+                    delete[] extensions;
                     return false;
+                }
             }
+
+            delete[] extensions;
         }
 
         return true;
@@ -377,5 +388,24 @@ namespace vk
         swapExtent->width  = std::max(scInfo.surfaceCaps.minImageExtent.width,  std::min(scInfo.surfaceCaps.maxImageExtent.width,  currentSize.width));
         swapExtent->height = std::max(scInfo.surfaceCaps.minImageExtent.height, std::min(scInfo.surfaceCaps.maxImageExtent.height, currentSize.height));
         LOG_MESSAGE("WM sets extent width and height to max uint32!");
+    }
+
+    VkCompositeAlphaFlagBitsKHR getSupportedCompositeAlpha(VkCompositeAlphaFlagsKHR supportedFlags)
+    {
+        VkCompositeAlphaFlagBitsKHR compositeAlphaFlags[] = {
+            VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+            VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
+            VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
+            VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR
+        };
+
+        for (int i = 0; i < 4; ++i)
+        {
+            if (supportedFlags & compositeAlphaFlags[i])
+                return compositeAlphaFlags[i];
+        }
+
+        LOG_MESSAGE_ASSERT(false, "No composite alpha flags supported!");
+        return VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
     }
 }

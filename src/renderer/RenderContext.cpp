@@ -280,10 +280,10 @@ bool RenderContext::InitVulkan(const char *appTitle)
     if (!CreateImageViews()) return false;
     m_frameBuffers = CreateFramebuffers(m_renderPass);
     m_msaaFrameBuffers = CreateFramebuffers(m_msaaRenderPass);
-    activeRenderPass = m_renderPass;
+	activeRenderPass = m_renderPass;
 
     // allocate NUM_CMDBUFFERS command buffers (used to be m_frameBuffers.size())
-    VK_VERIFY(vk::createCommandBuffers(device, device.commandPool, m_commandBuffers, NUM_CMDBUFFERS));
+    VK_VERIFY(vk::createCommandBuffers(device, device.commandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, m_commandBuffers, NUM_CMDBUFFERS));
 
     return true;
 }

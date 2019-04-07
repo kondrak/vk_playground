@@ -16,11 +16,15 @@ struct SDL_Window;
 // fetch and call Vulkan extension function
 #define callVkF(func, inst, ...) ((PFN_##func)vkGetInstanceProcAddr(inst, #func))(inst, __VA_ARGS__)
 
+// fetch and call Vulkan extension function (no instance in arg list)
+#define callVkF2(func, inst, ...) ((PFN_##func)vkGetInstanceProcAddr(inst, #func))(__VA_ARGS__)
+
 // verify if VkResult is VK_SUCCESS
 #include "Utils.hpp"
 #define VK_VERIFY(x) { \
     VkResult res = (x); \
     LOG_MESSAGE_ASSERT(res == VK_SUCCESS, "Invalid VkResult: " << res << " in " << __FILE__ << ":" << __LINE__ << "\n"); \
+    (void)res; \
 }
 
 namespace vk
@@ -58,4 +62,5 @@ namespace vk
     // this application uses VMA for memory management
     VkResult createAllocator(const Device &device, VmaAllocator *allocator);
     void    destroyAllocator(VmaAllocator &allocator);
+    VkFormat getBestDepthFormat(const Device &device);
 }

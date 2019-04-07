@@ -19,8 +19,7 @@ namespace vk
         smCreateInfo.codeSize = codeSize;
         smCreateInfo.pCode = shaderSrc;
 
-        VkResult result = vkCreateShaderModule(device.logical, &smCreateInfo, nullptr, &shaderModule);
-        LOG_MESSAGE_ASSERT(result == VK_SUCCESS, "Could not create shader module: " << result);
+        VK_VERIFY(vkCreateShaderModule(device.logical, &smCreateInfo, nullptr, &shaderModule));
 
         return shaderModule;
     }
@@ -178,8 +177,15 @@ namespace vk
         plCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         plCreateInfo.setLayoutCount = 1;
         plCreateInfo.pSetLayouts = &descriptorLayout;
-        plCreateInfo.pushConstantRangeCount = 0;
-        plCreateInfo.pPushConstantRanges = nullptr;
+        plCreateInfo.pushConstantRangeCount = pipeline->pushConstantRangeCount;
+        if (pipeline->pushConstantRangeCount > 0)
+        {
+            plCreateInfo.pPushConstantRanges = &pipeline->pushConstantRange;
+        }
+        else
+        {
+            plCreateInfo.pPushConstantRanges = nullptr;
+        }
 
         VkResult plResult = vkCreatePipelineLayout(device.logical, &plCreateInfo, nullptr, &pipeline->layout);
         if (plResult != VK_SUCCESS)
@@ -240,7 +246,7 @@ namespace vk
             colorAttachmentDesc.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
         VkAttachmentDescription depthAttachmentDesc = {};
-        depthAttachmentDesc.format = VK_FORMAT_D32_SFLOAT;
+        depthAttachmentDesc.format = getBestDepthFormat(device);
         depthAttachmentDesc.samples = renderPass->sampleCount;
         depthAttachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         depthAttachmentDesc.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;

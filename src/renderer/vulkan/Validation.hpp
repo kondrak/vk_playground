@@ -9,6 +9,7 @@ namespace vk
 {
 #ifdef VALIDATION_LAYERS_ON
     // requested validation layers
+    static const int validationLayerCount = 1;
     static const char *validationLayers[] = { "VK_LAYER_LUNARG_standard_validation" };
 #endif
 
